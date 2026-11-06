@@ -16,8 +16,8 @@ const defaults = {
     bindings: null,
     // 'auto' (adapts to the frame rate) or a fraction of the screen resolution: '0.5', '0.75', '1', '1.5'
     resolution: 'auto',
-    // 'auto' (tier follows the frame rate) or a fixed tier: 'low', 'medium', 'high' (see Quality.js)
-    quality: 'auto',
+    // Graphics mode: 'performance', 'medium' or 'high' (null = picked from the device, see Quality.js)
+    quality: null,
     // Real reflections of the world in the water (the most expensive effect)
     reflections: true,
     // FPS counter in the top right corner

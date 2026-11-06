@@ -28,7 +28,7 @@ export class Rendering {
 
         this.scene = new THREE.Scene()
 
-        // Bloom and tilt-shift follow the quality tier (see Quality.TIERS)
+        // Bloom and tilt-shift depend on the graphics mode (see Quality.MODES)
         this.effects = {
             enabled: params.get('post') !== 'off',
             bloom: quality.preset.bloom,
@@ -49,12 +49,6 @@ export class Rendering {
 
         window.addEventListener('resize', () => this.resize())
         this.game.events.on('quality:change', () => this.resize())
-        this.game.events.on('quality:tier', (preset) => {
-            if (preset.bloom === this.effects.bloom && preset.tiltShift === this.effects.tiltShift) return
-            this.effects.bloom = preset.bloom
-            this.effects.tiltShift = preset.tiltShift
-            if (this.ready) this.setPipeline()
-        })
         this.game.ticker.on(() => this.render(), TickOrder.RENDER)
         this.game.events.on('camera:change', (mode) => {
             this.effects.overview = mode === 'overview'
@@ -67,7 +61,6 @@ export class Rendering {
         this.resize()
         await this.renderer.init()
         this.effects.overview = this.game.view.mode === 'overview'
-        this.ready = true
         this.setPipeline()
     }
 

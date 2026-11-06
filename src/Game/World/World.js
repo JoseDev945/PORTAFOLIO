@@ -71,14 +71,8 @@ export class World {
             skyColor: HORIZON,
             reflections: this.reflectionOptions()
         })
-        // Reflections render the world a second time: the player's setting and the quality tier decide
-        const updateReflections = () => {
-            const options = this.reflectionOptions()
-            const current = this.water.reflections
-            if (options.enabled !== current.enabled || options.resolution !== current.resolution) this.water.setReflections(options)
-        }
-        this.game.events.on('settings:change', (key) => key === 'reflections' && updateReflections())
-        this.game.events.on('quality:tier', updateReflections)
+        // Reflections render the world a second time: the player's setting and the graphics mode decide
+        this.game.events.on('settings:change', (key) => key === 'reflections' && this.water.setReflections(this.reflectionOptions()))
         this.birds = new Birds({ scene })
         this.dayCycle = new DayCycle({ lighting: this.lighting, sky: this.sky, water: this.water, stars: this.sky, fog: scene.fog })
         this.zones = new Zones()
