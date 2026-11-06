@@ -455,7 +455,7 @@ kbd {
 }
 
 .fps {
-    right: 64px;
+    right: 112px;
 }
 
 .webgl.grabbing {
@@ -1044,4 +1044,105 @@ html.has-deck.has-fishing .touch-buttons {
         'fish lights character'
         'respawn map camera'
         'boost boost boost';
+}
+
+/* Fullscreen toggle, next to ⚙ (see UI/FullscreenButton.js) */
+.fullscreen-button {
+    position: fixed;
+    top: calc(12px + env(safe-area-inset-top));
+    right: calc(64px + env(safe-area-inset-right));
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(8, 30, 60, 0.5);
+    color: #fff;
+    cursor: pointer;
+    z-index: 4;
+}
+
+.fullscreen-button[hidden] {
+    display: none;
+}
+
+.fullscreen-button .exit,
+html.fullscreen .fullscreen-button .enter {
+    display: none;
+}
+
+html.fullscreen .fullscreen-button .exit {
+    display: inline;
+}
+
+/* ✕ buttons: map and project card */
+.map.visible {
+    pointer-events: auto;
+}
+
+.map-close,
+.card-close {
+    position: absolute;
+    display: grid;
+    place-items: center;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+    font: 700 1rem/1 inherit;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.map-close {
+    top: calc(14px + env(safe-area-inset-top));
+    right: calc(16px + env(safe-area-inset-right));
+    width: 44px;
+    height: 44px;
+    font-size: 1.2rem;
+    z-index: 1;
+}
+
+.card-close {
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+}
+
+.project-card .project-year,
+.project-card h2 {
+    padding-right: 34px;
+}
+
+/* Touch: the showroom boat card shrinks to a slim pill (name + button) */
+html.touch .project-card.boat-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: auto;
+    max-width: calc(100vw - 32px);
+    padding: 6px 6px 6px 16px;
+    border-radius: 999px;
+}
+
+html.touch .boat-card .project-year,
+html.touch .boat-card p,
+html.touch .boat-card .boat-stats {
+    display: none;
+}
+
+html.touch .boat-card h2 {
+    margin: 0;
+    padding: 0;
+    font-size: 0.95rem;
+    white-space: nowrap;
+}
+
+html.touch .boat-card .boat-use {
+    width: auto;
+    padding: 0.5em 1em;
+    font-size: 0.8rem;
+    white-space: nowrap;
 }

@@ -1,12 +1,13 @@
 import { Game } from '../Game.js'
-import { CAMERA_NAMES } from '../View.js'
+import { CAMERA_NAMES, CAMERA_NAMES_TOUCH } from '../View.js'
+import { isTouch } from '../Inputs.js'
 
 // Shows the name of the camera mode for a moment after switching
 export class CameraToast {
     constructor() {
         this.game = Game.getInstance()
         this.element = document.getElementById('camera-toast')
-        this.game.events.on('camera:change', (mode) => this.show(CAMERA_NAMES[mode]))
+        this.game.events.on('camera:change', (mode) => this.show((isTouch() ? CAMERA_NAMES_TOUCH : CAMERA_NAMES)[mode]))
     }
 
     show(text) {

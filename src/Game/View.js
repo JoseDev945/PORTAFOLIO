@@ -2,6 +2,7 @@ import * as THREE from 'three/webgpu'
 import { Game } from './Game.js'
 import { TickOrder } from './Ticker.js'
 import { capturePointer } from './utils/pointer.js'
+import { isTouch } from './Inputs.js'
 
 // Camera modes, cycled with C / F5 like Minecraft:
 //   overview  fixed-angle follow camera seen from above (Bruno Simon style):
@@ -18,6 +19,8 @@ export const CAMERA_NAMES = {
     front: 'Tercera persona (adelante)',
     first: 'Primera persona · clic para mirar con el mouse'
 }
+// Touch screens have no mouse: what the toast says instead
+export const CAMERA_NAMES_TOUCH = { ...CAMERA_NAMES, first: 'Primera persona · arrastra para mirar' }
 const FOV = { overview: 40, behind: 60, front: 60, first: 72 }
 
 const _euler = new THREE.Euler()
@@ -98,7 +101,8 @@ export class View {
             capturePointer(canvas, event.pointerId)
             this.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
             this.pinchDistance = this.getPinchDistance()
-            this.drag.active = this.mouseEnabled && this.pointers.size === 1
+            // First person always needs to look around, whatever the setting
+            this.drag.active = (this.mouseEnabled || this.mode === 'first') && this.pointers.size === 1
             canvas.classList.toggle('grabbing', this.drag.active)
         })
         canvas.addEventListener('pointermove', (event) => {
@@ -118,6 +122,12 @@ export class View {
             }
             if (!this.drag.active) return
 
+            if (this.mode === 'first') {
+                // Like the locked mouse (and mobile shooters): the view follows the finger
+                this.chase.orbitYawTarget -= dx * 0.006
+                this.chase.orbitPitchTarget = THREE.MathUtils.clamp(this.chase.orbitPitchTarget + dy * 0.005, -1.45, 1.45)
+                return
+            }
             if (this.mode !== 'overview') {
                 // Look around the boat
                 // Mouse events come at their own rhythm: move a target, the camera eases to it
@@ -158,6 +168,8 @@ export class View {
     }
 
     lock() {
+        // Touch screens drag to look: a lock (Android allows it) would swallow every touch
+        if (isTouch()) return
         try {
             const request = this.canvas.requestPointerLock()
             request?.catch?.(() => {})

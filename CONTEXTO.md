@@ -237,6 +237,18 @@ Principios clave:
       brillan de noche; **serpiente marina gigante** (`Fauna/Serpent.js`) que a veces cruza como
       sombra en la vista general. Ajustes en `world.js > fauna`.
 
+23. **Celular y pantalla completa** (6 de noviembre de 2026):
+    - **primera persona en celular**: no se podía mirar porque Android activaba el *pointer lock* al
+      tocar 🎥 y se tragaba los toques; ahora en modo táctil nunca se bloquea. El eje vertical estaba
+      invertido: ahora la vista sigue al dedo como el mouse (arriba = mirar arriba), con más rango;
+    - botón de **pantalla completa** junto a ⚙ (PC y celular; se oculta donde no existe, como Safari de
+      iPhone). El FPS se movió a la izquierda de ambos botones;
+    - el **mapa** ya no se cierra al tocarlo: tiene una ✕ (y sigue cerrando con Tab/M o 🗺);
+    - la **tarjeta de isla** tiene ✕ (se oculta hasta salir de la zona); la **de botes**, en celular, es
+      una píldora con nombre y botón;
+    - en celular ya no aparecen teclas: el botón del bote no dice "(Enter)", el aviso de cámara dice
+      "arrastra para mirar" y el de pesca dice "toca 🎣".
+
 ### Errores visuales ya resueltos (por si reaparecen)
 
 - **Borda negra que parpadeaba** (ferry y Corvina): compartía caras con la pared blanca. Ahora va

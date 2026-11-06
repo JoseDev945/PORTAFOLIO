@@ -14,6 +14,11 @@ export class ProjectCard {
         this.current = null
         // The screenshot opens the project too
         this.image.addEventListener('click', () => this.open())
+        // ✕ hides the card until the boat leaves the zone
+        document.getElementById('project-close').addEventListener('click', () => {
+            this.element.classList.remove('visible')
+            this.game.events.trigger('ui:click')
+        })
 
         const projectOf = (zone) => (zone?.type === 'project' ? zone.project : null)
         this.game.events.on('zone:change', (active) => {

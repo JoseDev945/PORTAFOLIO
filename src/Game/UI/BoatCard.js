@@ -69,7 +69,14 @@ export class BoatCard {
         const inUse = this.game.boat.definition.id === definition.id
         this.button.disabled = inUse
         const key = keyLabel(this.game.inputs.keysFor('open')[0])
-        this.button.textContent = inUse ? '✓ Es tu bote actual' : `Usar este bote (${key})`
+        // The key only on desktop: touch screens just tap the button
+        if (inUse) this.button.textContent = '✓ Es tu bote actual'
+        else {
+            const hint = document.createElement('span')
+            hint.className = 'desktop-only'
+            hint.textContent = ` (${key})`
+            this.button.replaceChildren('Usar este bote', hint)
+        }
     }
 
     select() {

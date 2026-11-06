@@ -29,6 +29,7 @@
     </div>
 
     <div class="project-card" id="project-card">
+        <button class="card-close" id="project-close" aria-label="Cerrar">✕</button>
         <div class="project-year" id="project-year"></div>
         <h2 id="project-title"></h2>
         <img class="project-image" id="project-image" alt="" hidden />
@@ -52,8 +53,9 @@
     <div class="crosshair" id="crosshair" aria-hidden="true"></div>
 
     <div class="map" id="map">
+        <button class="map-close" id="map-close" aria-label="Cerrar mapa">✕</button>
         <canvas class="map-canvas" id="map-canvas"></canvas>
-        <div class="map-hint"><span class="desktop-only"><kbd data-hints="map"></kbd> cerrar mapa</span><span class="touch-only">Toca para cerrar el mapa</span></div>
+        <div class="map-hint desktop-only"><kbd data-hints="map"></kbd> cerrar mapa</div>
     </div>
 
     <div class="pause" id="pause">
@@ -117,6 +119,12 @@
     </div>
 
     <button class="pause-button" id="pause-button" aria-label="Pausa y ajustes">⚙</button>
+    <button class="fullscreen-button" id="fullscreen-button" aria-label="Pantalla completa" hidden>
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path class="enter" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+            <path class="exit" d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
+        </svg>
+    </button>
 
     <div class="touch-controls" id="touch-controls">
         <div class="stick" id="stick" aria-label="Joystick"><div class="stick-knob" id="stick-knob"></div></div>

@@ -6,6 +6,8 @@ import { shoreDistanceAt } from '../World/Water.js'
 import { colorMaterial, mistMaterial } from '../World/materials.js'
 import { createRod, createCatchMesh } from '../Boat/FishingGear.js'
 import { fish as SPECIES } from '../../data/fish.js'
+import { isTouch } from '../Inputs.js'
+import { keyLabel } from '../utils/keys.js'
 
 const GRAVITY = 9.8
 // Longer than this and the line snaps
@@ -174,7 +176,7 @@ export class Fishing {
         if (view.mode !== 'first') {
             // Fishing is done in first person: aim at a rod with the crosshair
             this.game.settings.set('camera', 'first')
-            this.toast('Apunta a una caña del porta cañas y pulsa G')
+            this.toast(isTouch() ? 'Apunta a una caña del porta cañas y toca 🎣' : `Apunta a una caña del porta cañas y pulsa ${keyLabel(this.game.inputs.keysFor('fish')[0])}`)
             return
         }
         if (!this.equipped) {

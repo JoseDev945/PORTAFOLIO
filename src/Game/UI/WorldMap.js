@@ -13,8 +13,8 @@ export class WorldMap {
         this.canvas = document.getElementById('map-canvas')
         this.context = this.canvas.getContext('2d')
         this.visible = false
-        // Touch devices have no Tab key: tapping the map closes it
-        this.element.addEventListener('click', () => this.toggle(false))
+        // Only the ✕ (or the map key / 🗺) closes it: a stray tap on the map shouldn't
+        document.getElementById('map-close').addEventListener('click', () => this.toggle(false))
 
         // Horizontal camera axes, used to rotate world (x, z) into map (x, y)
         const length = Math.hypot(cameraDirection.x, cameraDirection.z)

@@ -45,6 +45,9 @@ export const ACTION_LABELS = {
 // Actions the player can rebind (all but pause)
 export const REBINDABLE = Object.keys(ACTIONS).filter((action) => action !== 'pause')
 
+// True while the on-screen touch controls are shown (see Inputs.setupTouchMode)
+export const isTouch = () => document.documentElement.classList.contains('touch')
+
 // Keys whose browser default (focus, scroll, reload…) must not happen when bound
 const BROWSER_KEYS = /^(Tab|Space|F\d+|Arrow\w+|Backspace)$/
 

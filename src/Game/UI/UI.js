@@ -9,6 +9,7 @@ import { KeyHints } from './KeyHints.js'
 import { CharacterPrompt } from './CharacterPrompt.js'
 import { FishingHud } from './FishingHud.js'
 import { Crosshair } from './Crosshair.js'
+import { FullscreenButton } from './FullscreenButton.js'
 
 // HTML interface on top of the canvas. Each piece is its own component that
 // listens to game events; add new panels here.
@@ -25,5 +26,6 @@ export class UI {
         this.characterPrompt = new CharacterPrompt()
         this.fishingHud = new FishingHud()
         this.crosshair = new Crosshair()
+        this.fullscreen = new FullscreenButton()
     }
 }

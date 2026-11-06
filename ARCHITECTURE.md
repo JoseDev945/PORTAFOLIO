@@ -95,7 +95,9 @@ celular. El modo elegido se guarda en los ajustes (`settings.camera`).
   "mover la cámara" está apagado en los ajustes.
 - **Primera persona estilo Minecraft**: un clic bloquea el mouse (Pointer Lock) y el mouse gira la vista
   directamente. Esc lo libera y abre la pausa. Caminando, el cuerpo gira con la vista, ↑ ↓ avanzan y
-  ← → dan pasos de lado. En celular se sigue arrastrando.
+  ← → dan pasos de lado. En celular se arrastra (la vista sigue al dedo, como el mouse) y nunca se
+  pide el *pointer lock* (`isTouch()` de `Inputs.js`), porque en Android se tragaría los toques.
+- Junto a ⚙ está el botón de pantalla completa (`UI/FullscreenButton.js`).
 - La posición de los ojos del piloto depende del tipo de bote: `eyeOffset()` en `BoatMesh.js` la
   calcula según `layout` y tamaño.
 - Al cambiar de modo se dispara `camera:change`:
