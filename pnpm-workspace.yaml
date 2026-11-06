@@ -1,0 +1,18 @@
+# pnpm settings for this project (supply chain security)
+# https://pnpm.io/supply-chain-security
+
+# Don't install versions published less than 3 days ago: most malicious
+# releases are detected and pulled from the registry within that window
+minimumReleaseAge: 4320
+
+# Fail if a package suddenly loses its trust level (e.g. it was published
+# with provenance before and now isn't, a sign of a stolen publish token)
+trustPolicy: no-downgrade
+
+# Dependency install scripts (postinstall, etc.) never run unless they are
+# listed here. strictDepBuilds makes the install fail on an unreviewed one.
+strictDepBuilds: true
+allowBuilds: {}
+
+# Only direct dependencies may come from git or tarball URLs
+blockExoticSubdeps: true

@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a3d6b" />
+    <title>Portafolio — Bote</title>
+    <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+    <canvas class="webgl"></canvas>
+
+    <div class="start" id="start">
+        <div class="start-card">
+            <h1>Mi Portafolio</h1>
+            <p>Navega entre las islas para descubrir mis proyectos.</p>
+            <button id="start-button" disabled>Cargando…</button>
+            <div class="keys" data-hints="start"></div>
+            <div class="keys-touch">
+                <span>Usa el joystick para navegar y <b>TURBO</b> para acelerar</span>
+                <span>Arrastra la pantalla para mirar · pellizca para hacer zoom</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="hud">
+        <div class="hud-title">Mi Portafolio</div>
+        <div class="hud-hint" data-hints="hud"></div>
+    </div>
+
+    <div class="project-card" id="project-card">
+        <div class="project-year" id="project-year"></div>
+        <h2 id="project-title"></h2>
+        <img class="project-image" id="project-image" alt="" hidden />
+        <p id="project-description"></p>
+        <div class="project-tags" id="project-tags"></div>
+        <a id="project-link" target="_blank" rel="noopener">Ver proyecto ↗ <kbd class="desktop-only" data-hints="open"></kbd></a>
+    </div>
+
+    <div class="project-card boat-card" id="boat-card">
+        <div class="project-year">BOTES GALILEO</div>
+        <h2 id="boat-name"></h2>
+        <p id="boat-description"></p>
+        <div class="boat-stats" id="boat-stats"></div>
+        <button class="boat-use" id="boat-use"></button>
+    </div>
+
+    <div class="camera-toast" id="camera-toast" aria-live="polite"></div>
+    <div class="character-prompt" id="character-prompt" aria-live="polite"></div>
+    <div class="camera-toast fish-toast" id="fish-toast" aria-live="polite"></div>
+    <div class="fish-hud" id="fish-hud"></div>
+    <div class="crosshair" id="crosshair" aria-hidden="true"></div>
+
+    <div class="map" id="map">
+        <canvas class="map-canvas" id="map-canvas"></canvas>
+        <div class="map-hint"><span class="desktop-only"><kbd data-hints="map"></kbd> cerrar mapa</span><span class="touch-only">Toca para cerrar el mapa</span></div>
+    </div>
+
+    <div class="pause" id="pause">
+        <div class="pause-card" role="dialog" aria-labelledby="pause-title">
+            <h2 id="pause-title">Pausa</h2>
+            <label class="toggle">
+                <span>Música</span>
+                <input type="checkbox" data-setting="music" />
+                <i></i>
+            </label>
+            <label class="toggle">
+                <span>Efectos de sonido</span>
+                <input type="checkbox" data-setting="effects" />
+                <i></i>
+            </label>
+            <label class="toggle">
+                <span>Mover la cámara arrastrando</span>
+                <input type="checkbox" data-setting="mouseCamera" />
+                <i></i>
+            </label>
+            <div class="select">
+                <label for="resolution-input">Resolución</label>
+                <select id="resolution-input" data-setting="resolution">
+                    <option value="auto">Automática</option>
+                    <option value="0.5">50 %</option>
+                    <option value="0.75">75 %</option>
+                    <option value="1">100 %</option>
+                    <option value="1.5">150 %</option>
+                </select>
+            </div>
+            <label class="toggle">
+                <span>Reflejos en el agua</span>
+                <input type="checkbox" data-setting="reflections" />
+                <i></i>
+            </label>
+            <label class="toggle">
+                <span>Mostrar FPS</span>
+                <input type="checkbox" data-setting="showFps" />
+                <i></i>
+            </label>
+            <div class="slider">
+                <label for="steering-input">Sensibilidad de giro</label>
+                <output for="steering-input"></output>
+                <input type="range" id="steering-input" min="0.5" max="1.5" step="0.05" data-setting="steering" />
+            </div>
+            <button class="secondary-button desktop-only" id="controls-button">⌨ Controles</button>
+            <button id="resume-button">Continuar</button>
+            <div class="pause-keys desktop-only" data-hints="pause"></div>
+        </div>
+
+        <div class="pause-card controls-card" id="controls-card" role="dialog" aria-labelledby="controls-title" hidden>
+            <h2 id="controls-title">Controles</h2>
+            <p class="controls-help">Haz clic en una tecla y presiona la nueva. <kbd>Esc</kbd> cancela.</p>
+            <div class="controls-list" id="controls-list"></div>
+            <p class="controls-message" id="controls-message" aria-live="polite"></p>
+            <div class="controls-actions">
+                <button class="secondary-button" id="controls-reset">Restablecer</button>
+                <button id="controls-back">Volver</button>
+            </div>
+        </div>
+    </div>
+
+    <button class="pause-button" id="pause-button" aria-label="Pausa y ajustes">⚙</button>
+
+    <div class="touch-controls" id="touch-controls">
+        <div class="stick" id="stick" aria-label="Joystick"><div class="stick-knob" id="stick-knob"></div></div>
+        <div class="touch-buttons">
+            <button class="touch-button small" data-action="respawn" aria-label="Reaparecer">↺</button>
+            <button class="touch-button small" data-action="map" aria-label="Mapa">🗺</button>
+            <button class="touch-button small" data-action="camera" aria-label="Cambiar cámara">🎥</button>
+            <button class="touch-button small deck-only" data-action="character" aria-label="Caminar, sentarse o tomar el timón">🚶</button>
+            <button class="touch-button small deck-only" data-action="lights" aria-label="Luces del bote">💡</button>
+            <button class="touch-button small fish-only" data-action="fish" aria-label="Pescar o recoger el sedal">🎣</button>
+            <button class="touch-button boost" data-hold="boost" aria-label="Turbo">TURBO</button>
+        </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
