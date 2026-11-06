@@ -134,6 +134,16 @@ export class Character {
     }
 
     act() {
+        // First person: F uses what the crosshair is on (a rod, the helm)
+        const aimed = this.aimedTarget()
+        if (aimed?.kind === 'rod') {
+            this.game.fishing.use()
+            return
+        }
+        if (aimed?.kind === 'helm') {
+            this.takeHelm()
+            return
+        }
         if (!this.deck) return
         if (this.state === 'driving') {
             // Step back from the console, out of the way of the wheel
@@ -323,6 +333,27 @@ export class Character {
         return _toWheel.dot(_forward) / distance > Math.cos(0.45)
     }
 
+    // What the crosshair is on in first person, if F can use it:
+    // { kind: 'rod' | 'helm', object, prompt: [{ action, label }, …] } or null
+    aimedTarget() {
+        if (this.game.view.mode !== 'first' || !this.game.playing) return null
+        const fishing = this.game.fishing
+        if (fishing?.aimed) {
+            return { kind: 'rod', object: fishing.aimed.aim, prompt: [{ action: 'character', label: fishing.equipped ? 'Guardar caña' : 'Tomar caña' }] }
+        }
+        if (this.deck && this.state === 'walking' && this.canUseHelm() && this.aimingAtHelm()) {
+            return {
+                kind: 'helm',
+                object: this.deck.helm.wheel,
+                prompt: [
+                    { action: 'character', label: 'Tomar el timón' },
+                    { action: 'lights', label: this.lightsOn ? 'Apagar luces' : 'Encender luces' }
+                ]
+            }
+        }
+        return null
+    }
+
     // What the keys do right now: [{ action, label }, …]
     updatePrompt() {
         const prompt = []
@@ -330,6 +361,11 @@ export class Character {
         if (isTouch() && this.game.view.mode === 'first') {
             if (this.canUseHelm() && this.aimingAtHelm()) prompt.push({ action: 'lights', label: this.lightsOn ? 'Apagar luces' : 'Encender luces' })
             this.setPrompt(prompt.length ? prompt : null)
+            return
+        }
+        // On desktop what the crosshair is on gets its own label next to it (UI/AimLabel.js)
+        if (this.aimedTarget()) {
+            this.setPrompt(null)
             return
         }
         if (this.state === 'driving') prompt.push({ action: 'character', label: 'Levantarte y caminar' })

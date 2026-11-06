@@ -9,7 +9,7 @@
 // to place objects at the boat's position, then "Copiar datos" and paste here.
 export const world = {
     // Boat type from data/boats.js
-    playerBoat: 'lancha',
+    playerBoat: 'galileo-corvina',
     spawn: { x: 5, z: 26, angle: 0 },
 
     // Sea life: schools of fish and turtles around the islands, a pod of

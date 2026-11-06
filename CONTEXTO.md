@@ -252,30 +252,26 @@ Principios clave:
       un botón; se quitaron los botones 💡 y 🎣. Con la caña en la mano, **TURBO se vuelve 🎣**
       (lanzar / recoger) gracias a la clase `has-rod` que pone `Fishing.setEquipped`.
 
-24. **Modos de gráficos y FPS** (6 de noviembre de 2026), en `Quality.js`:
-    - primero se hizo una calidad que cambiaba de nivel sola, pero **no le gustó** (quería siempre lo
-      mejor posible) y al cambiar el nivel en vivo **el mapa se veía todo celeste** (rehacer sombras y
-      pases de render en caliente no es fiable). Se quitó;
-    - ahora hay 3 **modos** en Pausa → **Gráficos**: **Rendimiento** (sin sombras ni reflejos, ×1),
-      **Medio** (sombras 1024, reflejos 25 %, ×1,25) y **Alta gama** (sombras 2048, reflejos 40 %,
-      tilt-shift, ×1,5). Todos tienen bloom. Celular empieza en Medio y PC en Alta gama;
-    - **cambiar de modo recarga la página** (así nunca se rompe el render). `?quality=performance|medium|high`
-      lo fija solo para esa visita;
-    - el modo nunca cambia solo: lo único automático es la **resolución** (si "Resolución" es Automática),
-      que baja si los FPS caen de 50 y sube con más de 58;
-    - `Ticker.realDelta` (sin límite) para medir FPS reales; la mira de pesca hace el raycast 15 veces
-      por segundo.
-
-25. **2 FPS con todo al máximo en la vista general** (6 de noviembre de 2026). Sin perfilar en el
-    navegador; se atacaron las causas probables:
-    - la **resolución** ya no se queda fija: el ajuste ("Resolución máxima") es el tope y siempre baja si
-      los FPS caen de 50, de golpe si la caída es grande (proporcional a √(fps/60)), hasta ×0,5;
-    - **MSAA** solo en pantallas de densidad 1 (multiplicaba el costo de todos los pases MRT);
-    - el **tilt-shift** (solo en vista general) desenfoca a media resolución;
-    - los **reflejos** se dibujan una vez por frame (`bounces: false`) y su tamaño sigue a la pantalla,
-      no al pixel ratio (`Water.setPixelRatio`).
-    - **Aviso táctil en primera persona**: solo muestra lo que apunta la mira (caña o consola para luces);
-      🚶 tiene su botón y con caña TURBO es 🎣. El "¡Recoger ya!" sí se muestra.
+24. **FPS: solo resolución adaptativa** (6 de noviembre de 2026), en `Quality.js`:
+    - se probaron niveles automáticos y luego modos manuales (Rendimiento/Medio/Alta gama); **no le
+      gustaron** (molestaban, y cambiar en vivo dejaba la pantalla celeste). **Se quitaron. No volver a
+      ponerlos**: los gráficos son siempre los mismos (sombras 2048 en PC / 1024 en celular, reflejos,
+      bloom, tilt-shift);
+    - Pausa → **Resolución** es una barra de 1 a 100 % de la resolución real de la pantalla (tope ×2).
+      Es el máximo: si los FPS bajan de 55 la resolución baja sola (de golpe si la caída es grande,
+      proporcional a √(fps/60), hasta ×0,5) y sube de a poco tras 3 medidas buenas;
+    - MSAA solo en PC con pantalla de densidad 1; tilt-shift a media resolución; reflejos una vez por
+      frame y del tamaño de la pantalla (`Water.setPixelRatio`); `Ticker.realDelta` para FPS reales.
+25. **Apuntar y usar con F, mapa con viaje, bote inicial** (6 de noviembre de 2026):
+    - **PC, primera persona**: al apuntar a una caña o a la consola sale una etiqueta al lado del objeto
+      (`UI/AimLabel.js`): "F Tomar caña", "F Tomar el timón · L Encender luces". **F usa lo que apuntas**
+      (`Character.aimedTarget`); si no apuntas a nada, F hace lo de siempre (caminar, sentarse);
+    - **celular, primera persona**: el aviso de arriba solo muestra lo que apunta la mira; 🚶 tiene su
+      botón y con caña TURBO es 🎣;
+    - **mapa**: tocar una isla la marca y aparece "Ir a esta isla", que teletransporta el bote junto a su
+      anillo de proyecto mirando a la isla (`Boat.teleport`);
+    - el **bote inicial** es la Corvina 250 (`playerBoat: 'galileo-corvina'`). Si el jugador ya eligió
+      otro en el astillero, se respeta lo guardado.
 
 ### Errores visuales ya resueltos (por si reaparecen)
 
@@ -299,13 +295,12 @@ Principios clave:
 - `#debug`: paneles Gráficos, Día y noche, Olas y viento, Física (ver colisiones), Terreno
   (editor) y Bote.
 - `?fps`: muestra el contador de FPS.
-- `?quality=performance` / `?quality=medium` / `?quality=high`: fija el modo de gráficos.
 - `?webgl`: fuerza WebGL2.
 - `?post=off`: sin post-procesado.
 - `?hora=noche`, `?hora=amanecer`, `?hora=dia` o `?hora=atardecer`: empieza a esa hora.
 
 **Ajustes guardados** (localStorage `portafolio-settings`): `music`, `effects`, `mouseCamera`,
-`steering`, `boat`, `camera`, `bindings`, `resolution`, `quality`, `reflections` y `showFps`.
+`steering`, `boat`, `camera`, `bindings`, `resolution` (0,01–1), `reflections` y `showFps`.
 
 **Teclas por defecto**:
 
@@ -317,7 +312,7 @@ Principios clave:
 | Mapa | Tab / M |
 | Abrir proyecto / usar bote | Enter / E |
 | Cambiar cámara | C / F5 |
-| Caminar / sentarse / timón | F |
+| Caminar / sentarse / timón; usar lo que apuntas (primera persona) | F |
 | Luces del bote | L |
 | Pescar / recoger (Corvina, primera persona) | G / clic derecho |
 | Pausa | Esc (fija) |

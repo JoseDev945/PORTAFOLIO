@@ -16,6 +16,13 @@ export class WorldMap {
         // Only the ✕ (or the map key / 🗺) closes it: a stray tap on the map shouldn't
         document.getElementById('map-close').addEventListener('click', () => this.toggle(false))
 
+        // Pick an island on the map, then "Ir a esta isla" teleports the boat next to it
+        this.selected = null
+        this.panel = document.getElementById('map-panel')
+        this.panelName = document.getElementById('map-panel-name')
+        this.canvas.addEventListener('click', (event) => this.pick(event))
+        document.getElementById('map-teleport').addEventListener('click', () => this.teleport())
+
         // Horizontal camera axes, used to rotate world (x, z) into map (x, y)
         const length = Math.hypot(cameraDirection.x, cameraDirection.z)
         this.forward = { x: -cameraDirection.x / length, z: -cameraDirection.z / length }
@@ -33,6 +40,7 @@ export class WorldMap {
         this.visible = force
         this.game.events.trigger('ui:click')
         this.element.classList.toggle('visible', force)
+        this.select(null)
         if (force) this.resize()
     }
 
@@ -43,6 +51,59 @@ export class WorldMap {
         this.canvas.height = rect.height * ratio
         this.size = rect.width
         this.ratio = ratio
+    }
+
+    // Map point (CSS pixels on the canvas) back to world x, z
+    unproject(mapX, mapY) {
+        const scale = (this.size * 0.5) / WORLD_RADIUS
+        const u = (mapX - this.size / 2) / scale
+        const v = -(mapY - this.size / 2) / scale
+        return { x: u * this.right.x + v * this.forward.x, z: u * this.right.z + v * this.forward.z }
+    }
+
+    pick(event) {
+        const rect = this.canvas.getBoundingClientRect()
+        const point = this.unproject(event.clientX - rect.left, event.clientY - rect.top)
+        let best = null
+        let bestDistance = Infinity
+        for (const island of this.game.world.islands) {
+            // Generous margin: islands are small on a phone
+            const distance = Math.hypot(island.x - point.x, island.z - point.z) - island.radius
+            if (distance < Math.max(8, island.radius * 0.6) && distance < bestDistance) {
+                best = island
+                bestDistance = distance
+            }
+        }
+        this.select(best)
+        this.game.events.trigger('ui:click')
+    }
+
+    select(island) {
+        this.selected = island
+        this.panel.hidden = !island
+        if (island) this.panelName.textContent = island.project ? (island.project.label ?? island.project.title) : 'Islote'
+    }
+
+    // Next to the island, on its project ring (the dock side), facing the island
+    teleport() {
+        const island = this.selected
+        if (!island) return
+        let x
+        let z
+        if (island.zone) {
+            const dx = island.zone.x - island.x
+            const dz = island.zone.z - island.z
+            const length = Math.hypot(dx, dz) || 1
+            x = island.zone.x + (dx / length) * 4
+            z = island.zone.z + (dz / length) * 4
+        } else {
+            // No ring: in open water on the side facing the center of the world
+            const length = Math.hypot(island.x, island.z) || 1
+            x = island.x - (island.x / length) * (island.radius + 12)
+            z = island.z - (island.z / length) * (island.radius + 12)
+        }
+        this.game.boat.teleport(x, z, Math.atan2(island.x - x, island.z - z))
+        this.toggle(false)
     }
 
     project(x, z) {
@@ -103,6 +164,14 @@ export class WorldMap {
             context.beginPath()
             context.arc(center.x, center.y, island.radius * 0.7 * scale, 0, Math.PI * 2)
             context.fill()
+
+            if (island === this.selected) {
+                context.strokeStyle = '#ffb347'
+                context.lineWidth = 3
+                context.beginPath()
+                context.arc(center.x, center.y, (island.radius + 8) * scale + 4, 0, Math.PI * 2)
+                context.stroke()
+            }
 
             // Islands without project are drawn without zone nor name
             if (!project) continue

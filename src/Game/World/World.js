@@ -71,7 +71,7 @@ export class World {
             skyColor: HORIZON,
             reflections: this.reflectionOptions()
         })
-        // Reflections render the world a second time: the player's setting and the graphics mode decide
+        // Reflections render the world a second time: "Reflejos en el agua" can turn them off
         const reflectionSize = () => this.water.setPixelRatio(this.game.quality.pixelRatio)
         reflectionSize()
         this.game.events.on('quality:change', reflectionSize)
@@ -114,8 +114,7 @@ export class World {
     }
 
     reflectionOptions() {
-        const resolution = this.game.quality.preset.reflections
-        return { enabled: this.game.settings.get('reflections') && resolution > 0, resolution: resolution || 0.25 }
+        return { enabled: this.game.settings.get('reflections'), resolution: this.game.quality.preset.reflections }
     }
 
     rebuild() {

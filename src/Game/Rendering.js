@@ -28,11 +28,10 @@ export class Rendering {
 
         this.scene = new THREE.Scene()
 
-        // Bloom and tilt-shift depend on the graphics mode (see Quality.MODES)
         this.effects = {
             enabled: params.get('post') !== 'off',
-            bloom: quality.preset.bloom,
-            tiltShift: quality.preset.tiltShift,
+            bloom: true,
+            tiltShift: true,
             // The miniature look only makes sense seen from above: off in the boat cameras
             overview: true,
             grading: true

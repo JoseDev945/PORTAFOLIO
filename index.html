@@ -55,6 +55,11 @@
     <div class="map" id="map">
         <button class="map-close" id="map-close" aria-label="Cerrar mapa">✕</button>
         <canvas class="map-canvas" id="map-canvas"></canvas>
+        <div class="map-panel" id="map-panel" hidden>
+            <span id="map-panel-name"></span>
+            <button id="map-teleport">Ir a esta isla</button>
+        </div>
+        <div class="map-tip">Toca una isla para viajar a ella</div>
         <div class="map-hint desktop-only"><kbd data-hints="map"></kbd> cerrar mapa</div>
     </div>
 
@@ -76,23 +81,10 @@
                 <input type="checkbox" data-setting="mouseCamera" />
                 <i></i>
             </label>
-            <div class="select">
-                <label for="quality-input">Gráficos <small>(recarga)</small></label>
-                <select id="quality-input" data-setting="quality">
-                    <option value="performance">Rendimiento</option>
-                    <option value="medium">Medio</option>
-                    <option value="high">Alta gama</option>
-                </select>
-            </div>
-            <div class="select">
-                <label for="resolution-input">Resolución máxima</label>
-                <select id="resolution-input" data-setting="resolution">
-                    <option value="auto">Automática</option>
-                    <option value="0.5">50 %</option>
-                    <option value="0.75">75 %</option>
-                    <option value="1">100 %</option>
-                    <option value="1.5">150 %</option>
-                </select>
+            <div class="slider">
+                <label for="resolution-input">Resolución</label>
+                <output for="resolution-input"></output>
+                <input type="range" id="resolution-input" min="0.01" max="1" step="0.01" data-setting="resolution" />
             </div>
             <label class="toggle">
                 <span>Reflejos en el agua</span>

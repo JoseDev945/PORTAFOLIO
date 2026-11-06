@@ -1173,3 +1173,70 @@ html.has-rod .rod-button {
 html.has-rod .touch-button[data-hold='boost'] {
     display: none;
 }
+
+/* Map: picked island and teleport button */
+.map-panel {
+    position: absolute;
+    left: 50%;
+    bottom: calc(52px + env(safe-area-inset-bottom));
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 6px 6px 18px;
+    border-radius: 999px;
+    background: rgba(8, 30, 60, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    font-weight: 700;
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+
+.map-panel[hidden] {
+    display: none;
+}
+
+.map-panel button {
+    padding: 0.6em 1.1em;
+    border: none;
+    border-radius: 999px;
+    background: #ffb347;
+    color: #3a1d00;
+    font: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.map-tip {
+    position: absolute;
+    top: calc(24px + env(safe-area-inset-top));
+    font-size: 0.85rem;
+    opacity: 0.75;
+}
+
+.map-canvas {
+    cursor: pointer;
+}
+
+/* Desktop, first person: "F Tomar caña" next to what the crosshair is on */
+.aim-label {
+    position: fixed;
+    left: 0;
+    top: 0;
+    display: grid;
+    gap: 4px;
+    padding: 6px 12px;
+    border-radius: 10px;
+    background: rgba(8, 30, 60, 0.8);
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 4;
+}
+
+.aim-label.visible {
+    opacity: 1;
+}

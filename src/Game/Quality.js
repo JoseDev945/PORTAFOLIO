@@ -1,62 +1,45 @@
 import { Game } from './Game.js'
 import { TickOrder } from './Ticker.js'
 
-// Graphics modes, picked in the pause menu ("Gráficos"). They're applied when
-// the game loads: switching reloads the page, because rebuilding shadows and
-// render passes on the fly isn't reliable on every GPU.
-//   pixelRatio    highest render resolution (× CSS pixels, capped by the screen)
-//   shadows       sun shadows (a second render of the scene) and their map size
-//   reflections   water reflections (a third render) resolution, 0 = off
-//   bloom         glow of emissive things (several blur passes)
-//   tiltShift     miniature blur in the overview (the most expensive effect)
-export const MODES = {
-    performance: { name: 'Rendimiento', pixelRatio: 1, shadows: false, shadowMapSize: 512, reflections: 0, bloom: true, tiltShift: false },
-    medium: { name: 'Medio', pixelRatio: 1.25, shadows: true, shadowMapSize: 1024, reflections: 0.25, bloom: true, tiltShift: false },
-    high: { name: 'Alta gama', pixelRatio: 1.5, shadows: true, shadowMapSize: 2048, reflections: 0.4, bloom: true, tiltShift: true }
-}
-
-// Below this the resolution goes down; above, it goes back up
-const FPS_LOW = 50
+// Below this the resolution goes down; above, it may go back up
+const FPS_LOW = 55
 const FPS_HIGH = 58
 // Seconds per measure
 const WINDOW = 1
-// Measures ignored at load (shaders compiling make the first frames slow)
+// Measures ignored at load or after a change (shaders compiling make frames slow)
 const SETTLE = 2
+// Good measures in a row needed before going back up (avoids see-sawing)
+const PATIENCE = 3
+// Never more than this (× CSS pixels): beyond it nobody sees the difference
+const MAX_PIXEL_RATIO = 2
 
-// Keeps the frame rate as high as possible without touching the look: the
-// mode never changes on its own, only the render resolution adapts. The
-// "Resolución" setting is the most it may use (Automática = what the mode
-// allows); whenever the frame rate drops, it goes down from there.
-// Phones start in "Medio", computers in "Alta gama".
-// ?quality=performance|medium|high pins a mode for this visit; ?fps shows the counter.
-// Triggers 'quality:change' when the resolution changes.
+// Keeps the frame rate at 60 or more on any device without touching the look:
+// the graphics are always the same, only the render resolution adapts. The
+// "Resolución" slider (1–100 % of the screen's real resolution) is the most it
+// may use; whenever the frame rate drops below 55 it goes down from there, at
+// once if the drop is big, and climbs back slowly when there's room.
+// ?fps shows the counter. Triggers 'quality:change' when the resolution changes.
 export class Quality {
     constructor() {
         this.game = Game.getInstance()
-        const { settings } = this.game
         const params = new URLSearchParams(window.location.search)
-        const isMobile = window.matchMedia('(pointer: coarse)').matches || Math.min(window.innerWidth, window.innerHeight) < 600
+        this.isMobile = window.matchMedia('(pointer: coarse)').matches || Math.min(window.innerWidth, window.innerHeight) < 600
 
-        const forced = params.get('quality')
-        if (!(settings.get('quality') in MODES)) settings.set('quality', isMobile ? 'medium' : 'high')
-        this.mode = forced in MODES ? forced : settings.get('quality')
-        this.preset = MODES[this.mode]
-        this.forced = forced in MODES
-
-        // MSAA multiplies the cost of every pass (the scene renders to several targets):
-        // only on plain screens, where jagged edges show the most. Can't change later.
-        this.antialias = this.mode === 'high' && window.devicePixelRatio <= 1
+        // Fixed look, sized per device (these can't change without rebuilding passes)
+        this.preset = {
+            shadowMapSize: this.isMobile ? 1024 : 2048,
+            // Fraction of the screen (CSS pixels) the water reflection is rendered at
+            reflections: this.isMobile ? 0.25 : 0.4
+        }
+        // MSAA multiplies the cost of every pass (the scene renders to several
+        // targets): only on plain screens, where jagged edges show the most
+        this.antialias = !this.isMobile && window.devicePixelRatio <= 1
         this.minPixelRatio = 0.5
-        this.applyResolution()
 
-        this.game.events.on('settings:change', (key) => {
-            if (key === 'resolution') this.applyResolution()
-            // New mode: the cleanest way to rebuild every pass is a fresh load
-            if (key === 'quality') window.location.reload()
-        })
-
-        this.measure = { frames: 0, elapsed: 0, settle: SETTLE }
+        this.measure = { frames: 0, elapsed: 0, settle: SETTLE, good: 0 }
         this.fps = 60
+        this.applyResolution()
+        this.game.events.on('settings:change', (key) => key === 'resolution' && this.applyResolution())
 
         // FPS counter: "Mostrar FPS" in the pause menu, or always with ?fps / #debug
         this.counter = document.createElement('div')
@@ -74,16 +57,14 @@ export class Quality {
         return this.preset.shadowMapSize
     }
 
-    // "Resolución" in the pause menu: 'auto' adapts to the frame rate,
-    // a number is a fixed percentage of the screen's real resolution
+    // The slider: a fraction (0.01 to 1) of the screen's real resolution
     applyResolution() {
-        const setting = this.game.settings.get('resolution')
-        const scale = Number(setting)
-        this.maxPixelRatio = setting === 'auto' || !Number.isFinite(scale) || scale <= 0
-            ? Math.min(window.devicePixelRatio, this.preset.pixelRatio)
-            : Math.min(Math.max(window.devicePixelRatio * scale, 0.25), 2)
+        const scale = Number(this.game.settings.get('resolution'))
+        const fraction = Number.isFinite(scale) ? Math.min(Math.max(scale, 0.01), 1) : 1
+        this.maxPixelRatio = Math.min(Math.max(window.devicePixelRatio * fraction, 0.1), MAX_PIXEL_RATIO)
         this.pixelRatio = this.maxPixelRatio
-        this.measure && (this.measure.settle = SETTLE)
+        this.measure.settle = SETTLE
+        this.measure.good = 0
         this.game.events.trigger('quality:change')
     }
 
@@ -117,19 +98,28 @@ export class Quality {
         measure.elapsed = 0
 
         // A hidden tab or the first frames say nothing about the device
-        if (this.forced || document.hidden) return
+        if (document.hidden) return
         if (measure.settle > 0) {
             measure.settle--
             return
         }
-        // The cost grows with the pixel count (ratio²): a big drop gets a big cut at once
-        let next = this.pixelRatio
+
         const floor = Math.min(this.minPixelRatio, this.maxPixelRatio)
-        if (this.fps < FPS_LOW) next = Math.max(floor, this.pixelRatio * Math.min(0.9, Math.max(0.5, Math.sqrt(this.fps / 60))))
-        else if (this.fps > FPS_HIGH) next = Math.min(this.maxPixelRatio, this.pixelRatio + 0.1)
-        if (Math.abs(next - this.pixelRatio) > 0.01) {
-            this.pixelRatio = next
-            this.game.events.trigger('quality:change')
+        if (this.fps < FPS_LOW) {
+            // The cost grows with the pixel count (ratio²): a big drop gets a big cut at once
+            measure.good = 0
+            this.setPixelRatio(Math.max(floor, this.pixelRatio * Math.min(0.9, Math.max(0.5, Math.sqrt(this.fps / 60)))))
+        } else if (this.fps > FPS_HIGH && this.pixelRatio < this.maxPixelRatio && ++measure.good >= PATIENCE) {
+            measure.good = 0
+            this.setPixelRatio(Math.min(this.maxPixelRatio, this.pixelRatio + 0.1))
         }
+    }
+
+    setPixelRatio(pixelRatio) {
+        if (Math.abs(pixelRatio - this.pixelRatio) < 0.01) return
+        this.pixelRatio = pixelRatio
+        // Give the new size a moment before judging it
+        this.measure.settle = 1
+        this.game.events.trigger('quality:change')
     }
 }

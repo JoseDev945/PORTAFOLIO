@@ -126,12 +126,11 @@ celular. El modo elegido se guarda en los ajustes (`settings.camera`).
 - **En #debug**:
   - Paneles **Gráficos** (activar cada efecto y sus intensidades), **Día y noche** (hora, minutos por día,
     pausar) y **Olas y viento**.
-- **Modos de gráficos** (`Quality.MODES`, Pausa → Gráficos): Rendimiento / Medio / Alta gama deciden
-  resolución máxima, sombras, reflejos y tilt-shift. Se leen al cargar; cambiar de modo recarga la página
-  (rehacer sombras y pases en vivo dejaba la pantalla celeste). Solo la resolución se adapta sola:
-  "Resolución máxima" es el tope y siempre baja si los FPS caen de 50.
+- **FPS** (`Quality.js`): los gráficos no cambian nunca; solo la resolución se adapta. La barra
+  "Resolución" (1–100 %) es el tope y baja sola si los FPS caen de 55. No hay modos de calidad (se probaron
+  y se quitaron: cambiar sombras o pases en vivo dejaba la pantalla celeste).
 - **Ajustes del jugador** (menú de pausa):
-  - **Resolución**: `Automática` se adapta a los fps; 50/75/100/150 % la fija respecto a la pantalla real (`Quality.applyResolution`).
+  - **Resolución**: barra de 1 a 100 % de la pantalla real; es el tope y baja sola para mantener 60 FPS (`Quality.applyResolution`).
   - **Reflejos en el agua**: apagarlos evita renderizar el mundo dos veces. En celular los reflejos usan menos resolución.
 
 ## Recetas
@@ -424,7 +423,6 @@ Estilo Minecraft, en primera persona, en botes cuyo modelo trae porta cañas y t
 |---|---|
 | `#debug` | Panel de ajustes, editor de terreno, vista de colisiones y contador de fps |
 | `?fps` | Solo el contador de fps |
-| `?quality=performance` / `medium` / `high` | Fija el modo de gráficos |
 | `?webgl` | Fuerza WebGL2 |
 | `?post=off` | Sin post-procesado |
 | `?hora=noche` | Empieza a esa hora: `noche`, `amanecer`, `dia` o `atardecer` |

@@ -143,8 +143,17 @@ export class Boat {
     }
 
     respawn() {
-        const angle = this.spawnAngle ?? 0
-        this.body.setTranslation({ x: this.spawn.x, y: this.spawn.y, z: this.spawn.z }, true)
+        this.place(this.spawn.x, this.spawn.z, this.spawnAngle ?? 0)
+    }
+
+    // Teleport (map): the boat appears there, still, facing `angle`
+    teleport(x, z, angle) {
+        this.place(x, z, angle)
+        this.game.view.snap({ x, z })
+    }
+
+    place(x, z, angle) {
+        this.body.setTranslation({ x, y: this.spawn.y, z }, true)
         this.body.setRotation({ x: 0, y: Math.sin(angle / 2), z: 0, w: Math.cos(angle / 2) }, true)
         this.body.setLinvel({ x: 0, y: 0, z: 0 }, true)
         this.body.setAngvel({ x: 0, y: 0, z: 0 }, true)
