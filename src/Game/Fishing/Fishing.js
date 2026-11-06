@@ -255,7 +255,12 @@ export class Fishing {
     update() {
         const delta = this.game.ticker.gameDelta
         this.updateHand(delta)
-        this.updateAim()
+        // The crosshair raycast 15 times per second is plenty (it's not free on phones)
+        this.aimClock = (this.aimClock ?? 0) + this.game.ticker.delta
+        if (this.aimClock >= 1 / 15) {
+            this.aimClock = 0
+            this.updateAim()
+        }
         if (delta === 0 || !this.gear) {
             this.updatePrompt()
             return

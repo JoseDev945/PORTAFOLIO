@@ -126,7 +126,9 @@ celular. El modo elegido se guarda en los ajustes (`settings.camera`).
 - **En #debug**:
   - Paneles **Gráficos** (activar cada efecto y sus intensidades), **Día y noche** (hora, minutos por día,
     pausar) y **Olas y viento**.
-- **Calidad**: el tilt-shift se apaga en calidad baja (celulares).
+- **Calidad** (`Quality.TIERS`): Baja / Media / Alta deciden resolución máxima, sombras, reflejos, bloom
+  y tilt-shift. En Automática el nivel baja solo si los FPS caen de 50 y sube con margen; avisa con
+  `quality:tier` (lo escuchan `Rendering`, `Lighting` y `World`).
 - **Ajustes del jugador** (menú de pausa):
   - **Resolución**: `Automática` se adapta a los fps; 50/75/100/150 % la fija respecto a la pantalla real (`Quality.applyResolution`).
   - **Reflejos en el agua**: apagarlos evita renderizar el mundo dos veces. En celular los reflejos usan menos resolución.
@@ -373,7 +375,7 @@ Estilo Minecraft, en primera persona, en botes cuyo modelo trae porta cañas y t
 
 | Orden | Sistema | Qué hace |
 |---|---|---|
-| 0 | Quality | Mide los fps y ajusta la resolución |
+| 0 | Quality | Mide los fps reales y ajusta nivel y resolución |
 | 10 | Physics | Pasos fijos de Rapier; el bote aplica fuerzas en `onStep` |
 | 20 | Boat | Sincroniza el modelo con el cuerpo físico |
 | 25 | Character | Persona a bordo, timón y acelerador animados, ojos de la primera persona |
@@ -400,6 +402,7 @@ Estilo Minecraft, en primera persona, en botes cuyo modelo trae porta cañas y t
 | `interact` | `zone` activa | Game (tecla Enter) | ProjectCard (abre el enlace), BoatCard (cambia de bote) |
 | `settings:change` | `key, value` | Settings | View, Audio, Boat, BoatCard |
 | `quality:change` | — | Quality | Rendering |
+| `quality:tier` | preset del nivel | Quality | Rendering, Lighting, World |
 | `ui:click` | — | WorldMap | Audio |
 | `camera:change` | `mode` | View | Rendering, World, CameraToast |
 | `action:<nombre>` | — | Inputs | Game |
@@ -421,7 +424,7 @@ Estilo Minecraft, en primera persona, en botes cuyo modelo trae porta cañas y t
 |---|---|
 | `#debug` | Panel de ajustes, editor de terreno, vista de colisiones y contador de fps |
 | `?fps` | Solo el contador de fps |
-| `?quality=low` / `?quality=high` | Fija la calidad |
+| `?quality=low` / `medium` / `high` | Fija el nivel de calidad |
 | `?webgl` | Fuerza WebGL2 |
 | `?post=off` | Sin post-procesado |
 | `?hora=noche` | Empieza a esa hora: `noche`, `amanecer`, `dia` o `atardecer` |

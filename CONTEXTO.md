@@ -252,6 +252,19 @@ Principios clave:
       un botón; se quitaron los botones 💡 y 🎣. Con la caña en la mano, **TURBO se vuelve 🎣**
       (lanzar / recoger) gracias a la clase `has-rod` que pone `Fishing.setEquipped`.
 
+24. **Calidad automática para 60 FPS** (6 de noviembre de 2026), en `Quality.js`:
+    - 3 niveles (`TIERS`): **Baja** (sin sombras, sin reflejos, sin bloom, resolución ×1),
+      **Media** (sombras 1024, reflejos 25 %, bloom, ×1,25) y **Alta** (sombras 2048, reflejos 40 %,
+      bloom, tilt-shift, ×1,5);
+    - empieza en Media en celular y Alta en PC. Cada 1,5 s mide los FPS reales: debajo de 50 baja un
+      nivel (y no vuelve a subir a ese), y solo en el nivel más bajo reduce la resolución. Con
+      más de 58 sube la resolución y, tras 3 medidas buenas, el nivel. Ignora las 2 primeras medidas
+      tras cada cambio (los shaders compilan);
+    - ajuste **Calidad** en Pausa (Automática / Baja / Media / Alta); `?quality=low|medium|high` la fija;
+    - evento `quality:tier`: `Rendering` (bloom, tilt-shift), `Lighting` (sombras) y `World` (reflejos);
+    - `Ticker.realDelta` (sin límite) para medir FPS reales; el contador muestra el nivel;
+    - la mira de pesca hace el raycast 15 veces por segundo, no en cada frame.
+
 ### Errores visuales ya resueltos (por si reaparecen)
 
 - **Borda negra que parpadeaba** (ferry y Corvina): compartía caras con la pared blanca. Ahora va
@@ -274,13 +287,13 @@ Principios clave:
 - `#debug`: paneles Gráficos, Día y noche, Olas y viento, Física (ver colisiones), Terreno
   (editor) y Bote.
 - `?fps`: muestra el contador de FPS.
-- `?quality=low` / `?quality=high`: fija la calidad.
+- `?quality=low` / `?quality=medium` / `?quality=high`: fija la calidad.
 - `?webgl`: fuerza WebGL2.
 - `?post=off`: sin post-procesado.
 - `?hora=noche`, `?hora=amanecer`, `?hora=dia` o `?hora=atardecer`: empieza a esa hora.
 
 **Ajustes guardados** (localStorage `portafolio-settings`): `music`, `effects`, `mouseCamera`,
-`steering`, `boat`, `camera`, `bindings`, `resolution`, `reflections` y `showFps`.
+`steering`, `boat`, `camera`, `bindings`, `resolution`, `quality`, `reflections` y `showFps`.
 
 **Teclas por defecto**:
 
@@ -322,11 +335,8 @@ Principios clave:
 
 - **Botes Galileo**: el enlace y la captura ya están; faltan sus colores de marca si los quiere.
 - **Proyectos 2 a 5**: textos, enlaces y nombres de relleno en `data/projects.js`.
-- **Contador de FPS, último detalle**: es real (cuenta los frames dibujados contra el reloj
-  real), pero el tiempo por frame del ticker está **limitado a 0.1 s** (`Ticker.maxDelta`). Por
-  debajo de 10 FPS el contador marcaría de más. Arreglo: guardar en `Ticker` un `realDelta`
-  sin límite y usarlo en `Quality.updateCounter`. Además, "ms" es el tiempo entre frames, no el
-  costo de dibujar. *(Se estaba revisando justo cuando se pidió este documento.)*
+- **Más rendimiento** (siguientes pasos): bajar fauna/pájaros/luciérnagas en calidad Baja, no
+  animar lo que está lejos o fuera de cámara, y medir con el perfilador de Chrome en un celular real.
 - **Bundle grande** (~5 MB, casi todo el WASM de Rapier incrustado): se puede reducir pasando a
   `@dimforge/rapier3d` con `vite-plugin-wasm`, como hace Bruno.
 - **Probar en dispositivos reales**: celular (controles táctiles), y medir FPS en el navegador

@@ -22,6 +22,8 @@ export class Ticker {
         // Real time since the last frame, clamped so a frozen tab doesn't explode the physics
         this.delta = 1 / 60
         this.maxDelta = 0.1
+        // Same, unclamped: what the frame really took (FPS counter, Quality)
+        this.realDelta = 1 / 60
         // Game time: frozen while paused (waves, wake, physics...)
         this.elapsed = 0
         this.gameDelta = 0
@@ -35,7 +37,8 @@ export class Ticker {
 
     tick() {
         const now = performance.now()
-        this.delta = Math.min((now - this.last) / 1000, this.maxDelta)
+        this.realDelta = (now - this.last) / 1000
+        this.delta = Math.min(this.realDelta, this.maxDelta)
         this.last = now
         this.gameDelta = this.game.state.paused ? 0 : this.delta
         this.elapsed += this.gameDelta

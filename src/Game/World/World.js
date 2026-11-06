@@ -69,10 +69,16 @@ export class World {
             islands: [],
             sunDirection: this.lighting.sunDirection,
             skyColor: HORIZON,
-            // Cheaper reflections on phones
-            reflections: { enabled: this.game.settings.get('reflections'), resolution: this.game.quality.level === 'high' ? 0.4 : 0.25 }
+            reflections: this.reflectionOptions()
         })
-        this.game.events.on('settings:change', (key, value) => key === 'reflections' && this.water.setReflections({ enabled: value }))
+        // Reflections render the world a second time: the player's setting and the quality tier decide
+        const updateReflections = () => {
+            const options = this.reflectionOptions()
+            const current = this.water.reflections
+            if (options.enabled !== current.enabled || options.resolution !== current.resolution) this.water.setReflections(options)
+        }
+        this.game.events.on('settings:change', (key) => key === 'reflections' && updateReflections())
+        this.game.events.on('quality:tier', updateReflections)
         this.birds = new Birds({ scene })
         this.dayCycle = new DayCycle({ lighting: this.lighting, sky: this.sky, water: this.water, stars: this.sky, fog: scene.fog })
         this.zones = new Zones()
@@ -104,6 +110,11 @@ export class World {
         })
         if (this.game.debug.active) this.editor = new WorldEditor()
         this.game.ticker.on(() => this.update(), TickOrder.WORLD)
+    }
+
+    reflectionOptions() {
+        const resolution = this.game.quality.preset.reflections
+        return { enabled: this.game.settings.get('reflections') && resolution > 0, resolution: resolution || 0.25 }
     }
 
     rebuild() {
