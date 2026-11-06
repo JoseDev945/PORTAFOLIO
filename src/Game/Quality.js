@@ -24,8 +24,10 @@ const WINDOW = 1
 const SETTLE = 2
 
 // Keeps the frame rate as high as possible without touching the look: the
-// mode never changes on its own, only the render resolution adapts (when
-// "Resolución" is Automática). Phones start in "Medio", computers in "Alta gama".
+// mode never changes on its own, only the render resolution adapts. The
+// "Resolución" setting is the most it may use (Automática = what the mode
+// allows); whenever the frame rate drops, it goes down from there.
+// Phones start in "Medio", computers in "Alta gama".
 // ?quality=performance|medium|high pins a mode for this visit; ?fps shows the counter.
 // Triggers 'quality:change' when the resolution changes.
 export class Quality {
@@ -41,10 +43,10 @@ export class Quality {
         this.preset = MODES[this.mode]
         this.forced = forced in MODES
 
-        // MSAA is costly on top of a high pixel ratio, and can't change after the renderer exists
-        this.antialias = this.mode === 'high' && window.devicePixelRatio <= 1.5
-        this.maxPixelRatio = Math.min(window.devicePixelRatio, this.preset.pixelRatio)
-        this.minPixelRatio = Math.min(0.6, this.maxPixelRatio)
+        // MSAA multiplies the cost of every pass (the scene renders to several targets):
+        // only on plain screens, where jagged edges show the most. Can't change later.
+        this.antialias = this.mode === 'high' && window.devicePixelRatio <= 1
+        this.minPixelRatio = 0.5
         this.applyResolution()
 
         this.game.events.on('settings:change', (key) => {
@@ -77,13 +79,11 @@ export class Quality {
     applyResolution() {
         const setting = this.game.settings.get('resolution')
         const scale = Number(setting)
-        if (setting === 'auto' || !Number.isFinite(scale) || scale <= 0) {
-            this.adaptive = !this.forced
-            this.pixelRatio = this.maxPixelRatio
-        } else {
-            this.adaptive = false
-            this.pixelRatio = Math.min(Math.max(window.devicePixelRatio * scale, 0.25), 2)
-        }
+        this.maxPixelRatio = setting === 'auto' || !Number.isFinite(scale) || scale <= 0
+            ? Math.min(window.devicePixelRatio, this.preset.pixelRatio)
+            : Math.min(Math.max(window.devicePixelRatio * scale, 0.25), 2)
+        this.pixelRatio = this.maxPixelRatio
+        this.measure && (this.measure.settle = SETTLE)
         this.game.events.trigger('quality:change')
     }
 
@@ -117,13 +117,15 @@ export class Quality {
         measure.elapsed = 0
 
         // A hidden tab or the first frames say nothing about the device
-        if (!this.adaptive || document.hidden) return
+        if (this.forced || document.hidden) return
         if (measure.settle > 0) {
             measure.settle--
             return
         }
+        // The cost grows with the pixel count (ratio²): a big drop gets a big cut at once
         let next = this.pixelRatio
-        if (this.fps < FPS_LOW) next = Math.max(this.minPixelRatio, this.pixelRatio * 0.85)
+        const floor = Math.min(this.minPixelRatio, this.maxPixelRatio)
+        if (this.fps < FPS_LOW) next = Math.max(floor, this.pixelRatio * Math.min(0.9, Math.max(0.5, Math.sqrt(this.fps / 60))))
         else if (this.fps > FPS_HIGH) next = Math.min(this.maxPixelRatio, this.pixelRatio + 0.1)
         if (Math.abs(next - this.pixelRatio) > 0.01) {
             this.pixelRatio = next

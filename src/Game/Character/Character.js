@@ -2,6 +2,7 @@ import * as THREE from 'three/webgpu'
 import { Game } from '../Game.js'
 import { TickOrder } from '../Ticker.js'
 import { createAvatar } from './Avatar.js'
+import { isTouch } from '../Inputs.js'
 
 const RADIUS = 0.22
 const WALK_SPEED = 1.7
@@ -13,6 +14,8 @@ const EYE = { stand: 1.62, sit: 1.25 }
 const SEAT_HEIGHT = 0.4
 
 const _direction = new THREE.Vector3()
+const _toWheel = new THREE.Vector3()
+const _forward = new THREE.Vector3()
 const _euler = new THREE.Euler()
 
 // Shortest way between two angles
@@ -310,9 +313,25 @@ export class Character {
         material.depthWrite = this.canopyOpacity > 0.95
     }
 
+    // First person: is the crosshair on the console (the wheel, close enough)?
+    aimingAtHelm() {
+        const camera = this.game.view.camera
+        this.deck.helm.wheel.getWorldPosition(_toWheel).sub(camera.position)
+        const distance = _toWheel.length()
+        if (distance > 2.5) return false
+        _forward.set(0, 0, -1).applyQuaternion(camera.quaternion)
+        return _toWheel.dot(_forward) / distance > Math.cos(0.45)
+    }
+
     // What the keys do right now: [{ action, label }, …]
     updatePrompt() {
         const prompt = []
+        // Touch screen in first person: only what the crosshair is on (🚶 has its own button)
+        if (isTouch() && this.game.view.mode === 'first') {
+            if (this.canUseHelm() && this.aimingAtHelm()) prompt.push({ action: 'lights', label: this.lightsOn ? 'Apagar luces' : 'Encender luces' })
+            this.setPrompt(prompt.length ? prompt : null)
+            return
+        }
         if (this.state === 'driving') prompt.push({ action: 'character', label: 'Levantarte y caminar' })
         else if (this.state === 'seated') prompt.push({ action: 'character', label: 'Levantarte' })
         else {

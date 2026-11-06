@@ -266,6 +266,17 @@ Principios clave:
     - `Ticker.realDelta` (sin límite) para medir FPS reales; la mira de pesca hace el raycast 15 veces
       por segundo.
 
+25. **2 FPS con todo al máximo en la vista general** (6 de noviembre de 2026). Sin perfilar en el
+    navegador; se atacaron las causas probables:
+    - la **resolución** ya no se queda fija: el ajuste ("Resolución máxima") es el tope y siempre baja si
+      los FPS caen de 50, de golpe si la caída es grande (proporcional a √(fps/60)), hasta ×0,5;
+    - **MSAA** solo en pantallas de densidad 1 (multiplicaba el costo de todos los pases MRT);
+    - el **tilt-shift** (solo en vista general) desenfoca a media resolución;
+    - los **reflejos** se dibujan una vez por frame (`bounces: false`) y su tamaño sigue a la pantalla,
+      no al pixel ratio (`Water.setPixelRatio`).
+    - **Aviso táctil en primera persona**: solo muestra lo que apunta la mira (caña o consola para luces);
+      🚶 tiene su botón y con caña TURBO es 🎣. El "¡Recoger ya!" sí se muestra.
+
 ### Errores visuales ya resueltos (por si reaparecen)
 
 - **Borda negra que parpadeaba** (ferry y Corvina): compartía caras con la pared blanca. Ahora va

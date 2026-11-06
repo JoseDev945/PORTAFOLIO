@@ -85,7 +85,8 @@ export class Rendering {
         }
 
         if (this.effects.tiltShift && this.effects.overview) {
-            const blurred = gaussianBlur(color, null, 3)
+            // Half resolution: it's a blur anyway, and a quarter of the pixels to process
+            const blurred = gaussianBlur(color, null, 3, { resolutionScale: 0.5 })
             const distance = screenUV.y.sub(0.5).abs()
             const amount = smoothstep(u.focusBand, u.focusBand.add(0.3), distance).mul(u.tiltShift)
             color = mix(color, blurred, amount)

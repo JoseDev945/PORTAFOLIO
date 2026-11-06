@@ -550,6 +550,8 @@ export class Fishing {
             else if (this.equipped) label = this.aimed ? 'Guardar caña' : 'Lanzar'
             else if (this.aimed) label = 'Tomar caña'
             else if (stopped && !first) label = 'Pescar (primera persona)'
+            // Touch screen in first person: only what the crosshair is on (TURBO is 🎣 with a rod)
+            if (first && isTouch() && !this.aimed && this.state !== 'bite') label = null
         }
         const prompt = label ? [{ action: 'fish', label }] : null
         const key = label ?? ''

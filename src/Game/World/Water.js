@@ -92,6 +92,13 @@ export class Water {
         this.rebuild()
     }
 
+    // The reflection's size follows the screen, not the render resolution: at a
+    // high pixel ratio it would cost a lot and nobody sees the extra detail
+    setPixelRatio(pixelRatio) {
+        this.pixelRatio = pixelRatio
+        if (this.reflection) this.reflection.reflector.resolutionScale = this.reflections.resolution / Math.max(1, pixelRatio)
+    }
+
     setReflections({ enabled, resolution }) {
         if (enabled !== undefined) this.reflections.enabled = enabled
         if (resolution !== undefined) this.reflections.resolution = resolution
@@ -145,7 +152,10 @@ export class Water {
         const fresnel = float(0.04).add(float(0.96).mul(pow(float(1).sub(facing), 5))).mul(u.reflectionStrength)
         let reflected = u.skyColor
         if (this.reflections.enabled) {
-            const reflection = reflector({ resolutionScale: this.reflections.resolution })
+            // bounces: false = rendered once per frame, not once per render call
+            const reflection = reflector({ resolutionScale: this.reflections.resolution, bounces: false })
+            this.reflection = reflection
+            this.setPixelRatio(this.pixelRatio ?? 1)
             reflection.target.rotateX(-Math.PI / 2)
             this.reflectionTarget?.removeFromParent()
             this.reflectionTarget = reflection.target
@@ -153,6 +163,7 @@ export class Water {
             reflection.uvNode = reflection.uvNode.add(normal.xz.mul(u.refraction.mul(1.6)))
             reflected = reflection.rgb
         } else {
+            this.reflection = null
             this.reflectionTarget?.removeFromParent()
             this.reflectionTarget = null
         }

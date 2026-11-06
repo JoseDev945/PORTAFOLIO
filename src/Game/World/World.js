@@ -72,7 +72,14 @@ export class World {
             reflections: this.reflectionOptions()
         })
         // Reflections render the world a second time: the player's setting and the graphics mode decide
-        this.game.events.on('settings:change', (key) => key === 'reflections' && this.water.setReflections(this.reflectionOptions()))
+        const reflectionSize = () => this.water.setPixelRatio(this.game.quality.pixelRatio)
+        reflectionSize()
+        this.game.events.on('quality:change', reflectionSize)
+        this.game.events.on('settings:change', (key) => {
+            if (key !== 'reflections') return
+            this.water.setReflections(this.reflectionOptions())
+            reflectionSize()
+        })
         this.birds = new Birds({ scene })
         this.dayCycle = new DayCycle({ lighting: this.lighting, sky: this.sky, water: this.water, stars: this.sky, fog: scene.fog })
         this.zones = new Zones()

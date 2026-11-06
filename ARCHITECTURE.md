@@ -128,7 +128,8 @@ celular. El modo elegido se guarda en los ajustes (`settings.camera`).
     pausar) y **Olas y viento**.
 - **Modos de gráficos** (`Quality.MODES`, Pausa → Gráficos): Rendimiento / Medio / Alta gama deciden
   resolución máxima, sombras, reflejos y tilt-shift. Se leen al cargar; cambiar de modo recarga la página
-  (rehacer sombras y pases en vivo dejaba la pantalla celeste). Solo la resolución se adapta sola.
+  (rehacer sombras y pases en vivo dejaba la pantalla celeste). Solo la resolución se adapta sola:
+  "Resolución máxima" es el tope y siempre baja si los FPS caen de 50.
 - **Ajustes del jugador** (menú de pausa):
   - **Resolución**: `Automática` se adapta a los fps; 50/75/100/150 % la fija respecto a la pantalla real (`Quality.applyResolution`).
   - **Reflejos en el agua**: apagarlos evita renderizar el mundo dos veces. En celular los reflejos usan menos resolución.
