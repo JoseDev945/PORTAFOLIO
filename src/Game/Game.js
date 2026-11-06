@@ -18,6 +18,17 @@ import { Audio } from './Audio.js'
 import { UI } from './UI/UI.js'
 import { Fishing } from './Fishing/Fishing.js'
 
+// Lets the browser paint and handle input before the next boot step
+const nextTask = () => globalThis.scheduler?.yield?.() ?? new Promise((resolve) => setTimeout(resolve, 0))
+
+// User Timing: each call measures from the previous one (or from "boot")
+let lastMark = 'boot'
+const measure = (name) => {
+    performance.mark(`${name}:end`)
+    performance.measure(name, lastMark)
+    lastMark = `${name}:end`
+}
+
 // Entry point and shared instance. Systems get it with Game.getInstance()
 // (same pattern as Bruno Simon's folio) instead of receiving a dozen
 // constructor arguments. Creation order matters: a system may only use the
@@ -29,11 +40,20 @@ export class Game {
         return Game.instance
     }
 
+    // Builds in steps and gives the main thread back between them, so the
+    // page keeps painting and answering while the world loads instead of
+    // freezing for seconds. Each step shows up in DevTools/Lighthouse as a
+    // "boot:…" User Timing measure.
     static async create(canvas) {
+        performance.mark('boot')
         await Physics.init()
+        measure('boot:physics')
         const game = new Game(canvas)
+        await game.build()
         await game.rendering.init()
+        measure('boot:renderer')
         game.rendering.renderer.setAnimationLoop(() => game.ticker.tick())
+        performance.measure('boot:total', 'boot')
         return game
     }
 
@@ -41,7 +61,9 @@ export class Game {
         Game.instance = this
         this.canvas = canvas
         this.state = { started: false, paused: false }
+    }
 
+    async build() {
         // Core
         this.events = new Events()
         this.ticker = new Ticker()
@@ -54,20 +76,28 @@ export class Game {
         this.physics = new Physics()
         this.rendering = new Rendering()
         this.view = new View()
+        measure('boot:core')
+        await nextTask()
 
         // Content
         this.world = new World()
+        measure('boot:world')
+        await nextTask()
         this.boat = new Boat()
         this.character = new Character()
         this.wake = new Wake()
         this.spray = new Spray()
         this.fishing = new Fishing()
+        measure('boot:boat')
+        await nextTask()
 
         // Output
         this.audio = new Audio()
         this.ui = new UI()
 
         this.setActions()
+        measure('boot:ui')
+        await nextTask()
     }
 
     // What each input action does depends on the game state, so it lives here

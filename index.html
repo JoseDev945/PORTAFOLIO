@@ -2,15 +2,18 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <!-- No maximum-scale/user-scalable: touch-action: none already stops page zoom in the game -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0a3d6b" />
+    <meta name="description" content="Portafolio interactivo en 3D: navega en bote entre islas para descubrir mis proyectos." />
     <title>Portafolio — Bote</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9B%B5%3C/text%3E%3C/svg%3E" />
     <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body>
     <canvas class="webgl"></canvas>
 
-    <div class="start" id="start">
+    <main class="start" id="start">
         <div class="start-card">
             <h1>Mi Portafolio</h1>
             <p>Navega entre las islas para descubrir mis proyectos.</p>
@@ -21,7 +24,7 @@
                 <span>Arrastra la pantalla para mirar · pellizca para hacer zoom</span>
             </div>
         </div>
-    </div>
+    </main>
 
     <div class="hud">
         <div class="hud-title">Mi Portafolio</div>
@@ -43,7 +46,7 @@
         <h2 id="boat-name"></h2>
         <p id="boat-description"></p>
         <div class="boat-stats" id="boat-stats"></div>
-        <button class="boat-use" id="boat-use"></button>
+        <button class="boat-use" id="boat-use">Usar este bote</button>
     </div>
 
     <div class="camera-toast" id="camera-toast" aria-live="polite"></div>
@@ -127,7 +130,7 @@
     </button>
 
     <div class="touch-controls" id="touch-controls">
-        <div class="stick" id="stick" aria-label="Joystick"><div class="stick-knob" id="stick-knob"></div></div>
+        <div class="stick" id="stick" role="group" aria-label="Joystick"><div class="stick-knob" id="stick-knob"></div></div>
         <div class="touch-buttons">
             <button class="touch-button small" data-action="respawn" aria-label="Reaparecer">↺</button>
             <button class="touch-button small" data-action="map" aria-label="Mapa">🗺</button>

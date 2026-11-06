@@ -20,14 +20,14 @@ un loop con orden fijo y sistemas que se comunican por eventos.
 
 ```
 src/
-├─ main.js                   Arranque
+├─ main.js                   Arranque mínimo: pinta la pantalla de inicio y luego import() de Game.js
 ├─ style.css
 ├─ data/                     ← CONTENIDO: lo que editas para cambiar el juego
 │  ├─ world.js               Mapa: islas, objetos, punto de inicio, barco del jugador
 │  ├─ boats.js               Tipos de barco (forma, colores, manejo)
 │  └─ projects.js            Textos, enlaces y colores de cada proyecto
 └─ Game/                     ← MOTOR
-   ├─ Game.js                Instancia central, crea los sistemas en orden
+   ├─ Game.js                Instancia central, crea los sistemas en orden (build() por pasos, medidas boot:…)
    ├─ Events.js              Bus de eventos (on / off / trigger)
    ├─ Ticker.js              Loop por frame + TickOrder
    ├─ Content.js             Lee src/data/ y lo recarga en vivo al guardar

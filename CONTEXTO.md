@@ -272,6 +272,21 @@ Principios clave:
       anillo de proyecto mirando a la isla (`Boat.teleport`);
     - el **bote inicial** es la Corvina 250 (`playerBoat: 'galileo-corvina'`). Si el jugador ya eligió
       otro en el astillero, se respeta lo guardado.
+26. **PageSpeed móvil** (6 de noviembre de 2026). El informe de PageSpeed daba **NO_FCP** ("la página no
+    ha renderizado ningún contenido") en todo. Cambios:
+    - `main.js` es una entrada mínima (~1 KB): carga `Game.js` con `import()` (chunk aparte) y **espera
+      a que el navegador reporte el primer pintado con contenido** (pantalla de inicio) antes de arrancar
+      WebGL (tope 1 s). En PageSpeed (sin GPU) el WebGL arrancaba antes de esa pintura;
+    - `Game.create` construye por pasos (`build()`) y cede el hilo entre núcleo, mundo, bote y UI
+      (`scheduler.yield`). Cada paso deja una medida `boot:…` (User Timing) visible en DevTools;
+    - `index.html`: meta description, favicon ⛵ en línea (antes 404), `<main>` en la pantalla de inicio,
+      el viewport ya no bloquea el zoom (`touch-action: none` ya lo impide en el juego), texto inicial en
+      el botón del astillero y `role="group"` en el joystick;
+    - `vercel.json`: caché de un año para `/assets/*` (llevan hash). `public/robots.txt`;
+    - **se probó y se descartó** `renderer.compileAsync()` antes del primer frame: bajaba el TBT de
+      Lighthouse, pero "Zarpar" se habilitaba ~4 s más tarde y el primer frame igual congelaba ~1 s;
+    - Lighthouse local (móvil): Accesibilidad, Prácticas y SEO en 100; Rendimiento ~0,7. Lo que queda es
+      el TBT del primer frame (compilar shaders, ~1 s real) y el bundle de ~2 MB gzip.
 
 ### Errores visuales ya resueltos (por si reaparecen)
 
@@ -335,6 +350,9 @@ Principios clave:
 - Al editar con scripts de `node -e`, las comillas invertidas (backticks) se rompen en bash.
   Usa el editor o un script en un archivo aparte.
 - Después de editar, revisa la sintaxis con `node --check archivo.js` y luego `pnpm build`.
+- **Lighthouse local**: `pnpm build`, levantar `preview` (puerto 4173, está en `.claude/launch.json`) y
+  `npx lighthouse@12 http://localhost:4173/ --chrome-flags="--headless=new"` (móvil por defecto). La API
+  de PageSpeed sin clave no tiene cuota. El TBT varía mucho entre corridas (3 a 12 s): compara varias.
 
 ---
 

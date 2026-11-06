@@ -61,6 +61,10 @@ export class Rendering {
         await this.renderer.init()
         this.effects.overview = this.game.view.mode === 'overview'
         this.setPipeline()
+        // No renderer.compileAsync() here on purpose: tried it (Nov 2026) and
+        // the start button unlocked ~4 s later while the first frame still froze
+        // ~1 s, because three polls each shader once per frame. Lighthouse TBT
+        // looked better, real waiting was worse.
     }
 
     // (Re)builds the post-processing graph from the enabled effects
