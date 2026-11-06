@@ -15,7 +15,8 @@ export class Lighting {
         scene.add(this.hemisphere)
 
         this.sun = new THREE.DirectionalLight('#fff1d6', 2.6)
-        this.sun.castShadow = true
+        // Off in "Modo rendimiento": shadows render the scene a second time
+        this.sun.castShadow = this.game.quality.preset.shadows
         this.sun.shadow.mapSize.setScalar(this.game.quality.shadowMapSize)
         const shadowCamera = this.sun.shadow.camera
         shadowCamera.left = shadowCamera.bottom = -45

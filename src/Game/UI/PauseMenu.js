@@ -29,6 +29,9 @@ export class PauseMenu {
             }
         }
 
+        // "Modo rendimiento" turns reflections off whatever this toggle says
+        document.getElementById('reflections-input').disabled = !this.game.quality.preset.reflections
+
         this.resumeButton.addEventListener('click', () => this.game.setPaused(false))
         document.getElementById('pause-button').addEventListener('click', () => this.game.setPaused(true))
         // Clicking the dimmed background also resumes

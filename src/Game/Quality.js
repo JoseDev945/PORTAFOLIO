@@ -1,45 +1,45 @@
 import { Game } from './Game.js'
 import { TickOrder } from './Ticker.js'
 
-// Below this the resolution goes down; above, it may go back up
-const FPS_LOW = 55
-const FPS_HIGH = 58
-// Seconds per measure
-const WINDOW = 1
-// Measures ignored at load or after a change (shaders compiling make frames slow)
-const SETTLE = 2
-// Good measures in a row needed before going back up (avoids see-sawing)
-const PATIENCE = 3
 // Never more than this (× CSS pixels): beyond it nobody sees the difference
 const MAX_PIXEL_RATIO = 2
 
-// Keeps the frame rate at 60 or more on any device without touching the look:
-// the graphics are always the same, only the render resolution adapts. The
-// "Resolución" slider (1–100 % of the screen's real resolution) is the most it
-// may use; whenever the frame rate drops below 55 it goes down from there, at
-// once if the drop is big, and climbs back slowly when there's room.
+// Graphics settings. The render resolution never changes on its own: it is
+// exactly what the "Resolución" slider says (1–100 % of the screen's real
+// resolution). To gain FPS without losing sharpness there's "Modo rendimiento",
+// which drops the costly extra renders instead of pixels:
+//   shadows       sun shadows (a second render of the scene)
+//   reflections   water reflections (a third render)
+//   tiltShift     miniature blur in the overview
+// It's on by default on phones. Switching it reloads the page: rebuilding
+// shadows and passes on the fly left the screen light blue on some GPUs.
 // ?fps shows the counter. Triggers 'quality:change' when the resolution changes.
 export class Quality {
     constructor() {
         this.game = Game.getInstance()
+        const { settings } = this.game
         const params = new URLSearchParams(window.location.search)
         this.isMobile = window.matchMedia('(pointer: coarse)').matches || Math.min(window.innerWidth, window.innerHeight) < 600
 
-        // Fixed look, sized per device (these can't change without rebuilding passes)
+        if (typeof settings.get('performance') !== 'boolean') settings.set('performance', this.isMobile)
+        this.performance = settings.get('performance')
         this.preset = {
+            shadows: !this.performance,
             shadowMapSize: this.isMobile ? 1024 : 2048,
+            reflections: !this.performance,
             // Fraction of the screen (CSS pixels) the water reflection is rendered at
-            reflections: this.isMobile ? 0.25 : 0.4
+            reflectionResolution: this.isMobile ? 0.25 : 0.4,
+            tiltShift: !this.performance
         }
         // MSAA multiplies the cost of every pass (the scene renders to several
         // targets): only on plain screens, where jagged edges show the most
         this.antialias = !this.isMobile && window.devicePixelRatio <= 1
-        this.minPixelRatio = 0.5
 
-        this.measure = { frames: 0, elapsed: 0, settle: SETTLE, good: 0 }
-        this.fps = 60
         this.applyResolution()
-        this.game.events.on('settings:change', (key) => key === 'resolution' && this.applyResolution())
+        this.game.events.on('settings:change', (key) => {
+            if (key === 'resolution') this.applyResolution()
+            if (key === 'performance') window.location.reload()
+        })
 
         // FPS counter: "Mostrar FPS" in the pause menu, or always with ?fps / #debug
         this.counter = document.createElement('div')
@@ -50,7 +50,7 @@ export class Quality {
         this.showCounter()
         this.game.events.on('settings:change', (key) => key === 'showFps' && this.showCounter())
 
-        this.game.ticker.on(() => this.update(this.game.ticker.realDelta), TickOrder.QUALITY)
+        this.game.ticker.on(() => this.updateCounter(this.game.ticker.realDelta), TickOrder.QUALITY)
     }
 
     get shadowMapSize() {
@@ -61,10 +61,7 @@ export class Quality {
     applyResolution() {
         const scale = Number(this.game.settings.get('resolution'))
         const fraction = Number.isFinite(scale) ? Math.min(Math.max(scale, 0.01), 1) : 1
-        this.maxPixelRatio = Math.min(Math.max(window.devicePixelRatio * fraction, 0.1), MAX_PIXEL_RATIO)
-        this.pixelRatio = this.maxPixelRatio
-        this.measure.settle = SETTLE
-        this.measure.good = 0
+        this.pixelRatio = Math.min(Math.max(window.devicePixelRatio * fraction, 0.1), MAX_PIXEL_RATIO)
         this.game.events.trigger('quality:change')
     }
 
@@ -85,41 +82,5 @@ export class Quality {
         this.display.elapsed = 0
         this.counter.textContent = `${Math.round(fps)} FPS · ${ms.toFixed(1)} ms · ${Math.round((this.pixelRatio / window.devicePixelRatio) * 100)}%`
         this.counter.dataset.level = fps >= 55 ? 'good' : fps >= 30 ? 'ok' : 'bad'
-    }
-
-    update(delta) {
-        this.updateCounter(delta)
-        const measure = this.measure
-        measure.frames++
-        measure.elapsed += delta
-        if (measure.elapsed < WINDOW) return
-        this.fps = measure.frames / measure.elapsed
-        measure.frames = 0
-        measure.elapsed = 0
-
-        // A hidden tab or the first frames say nothing about the device
-        if (document.hidden) return
-        if (measure.settle > 0) {
-            measure.settle--
-            return
-        }
-
-        const floor = Math.min(this.minPixelRatio, this.maxPixelRatio)
-        if (this.fps < FPS_LOW) {
-            // The cost grows with the pixel count (ratio²): a big drop gets a big cut at once
-            measure.good = 0
-            this.setPixelRatio(Math.max(floor, this.pixelRatio * Math.min(0.9, Math.max(0.5, Math.sqrt(this.fps / 60)))))
-        } else if (this.fps > FPS_HIGH && this.pixelRatio < this.maxPixelRatio && ++measure.good >= PATIENCE) {
-            measure.good = 0
-            this.setPixelRatio(Math.min(this.maxPixelRatio, this.pixelRatio + 0.1))
-        }
-    }
-
-    setPixelRatio(pixelRatio) {
-        if (Math.abs(pixelRatio - this.pixelRatio) < 0.01) return
-        this.pixelRatio = pixelRatio
-        // Give the new size a moment before judging it
-        this.measure.settle = 1
-        this.game.events.trigger('quality:change')
     }
 }

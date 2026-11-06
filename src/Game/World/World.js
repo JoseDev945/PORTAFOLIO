@@ -114,7 +114,8 @@ export class World {
     }
 
     reflectionOptions() {
-        return { enabled: this.game.settings.get('reflections'), resolution: this.game.quality.preset.reflections }
+        const { preset } = this.game.quality
+        return { enabled: preset.reflections && this.game.settings.get('reflections'), resolution: preset.reflectionResolution }
     }
 
     rebuild() {

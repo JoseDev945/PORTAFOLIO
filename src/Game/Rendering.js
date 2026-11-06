@@ -22,7 +22,8 @@ export class Rendering {
             antialias: quality.antialias,
             forceWebGL: params.has('webgl')
         })
-        this.renderer.shadowMap.enabled = true
+        // Off in "Modo rendimiento" (see Quality.js)
+        this.renderer.shadowMap.enabled = quality.preset.shadows
         this.renderer.shadowMap.type = THREE.PCFShadowMap
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping
 
@@ -31,7 +32,7 @@ export class Rendering {
         this.effects = {
             enabled: params.get('post') !== 'off',
             bloom: true,
-            tiltShift: true,
+            tiltShift: quality.preset.tiltShift,
             // The miniature look only makes sense seen from above: off in the boat cameras
             overview: true,
             grading: true

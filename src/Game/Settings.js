@@ -14,8 +14,10 @@ const defaults = {
     camera: 'overview',
     // Keys changed by the player: { action: [key, key] } (null = defaults, see Inputs.js)
     bindings: null,
-    // Most render resolution allowed, 0.01–1 of the screen's real one (it lowers itself to keep 60 FPS)
+    // Render resolution, 0.01–1 of the screen's real one (fixed, it never changes by itself)
     resolution: 1,
+    // No shadows, reflections or tilt-shift, same resolution (null = on in phones, see Quality.js)
+    performance: null,
     // Real reflections of the world in the water (the most expensive effect)
     reflections: true,
     // FPS counter in the top right corner

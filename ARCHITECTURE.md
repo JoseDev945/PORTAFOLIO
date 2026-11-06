@@ -126,11 +126,12 @@ celular. El modo elegido se guarda en los ajustes (`settings.camera`).
 - **En #debug**:
   - Paneles **Gráficos** (activar cada efecto y sus intensidades), **Día y noche** (hora, minutos por día,
     pausar) y **Olas y viento**.
-- **FPS** (`Quality.js`): los gráficos no cambian nunca; solo la resolución se adapta. La barra
-  "Resolución" (1–100 %) es el tope y baja sola si los FPS caen de 55. No hay modos de calidad (se probaron
-  y se quitaron: cambiar sombras o pases en vivo dejaba la pantalla celeste).
+- **FPS** (`Quality.js`): nada cambia solo. La resolución es fija (la de la barra) y el único modo es
+  **Modo rendimiento** (`Quality.preset`: sin sombras, reflejos ni tilt-shift; misma resolución). Se lee al
+  cargar y cambiarlo recarga la página (cambiar sombras o pases en vivo dejaba la pantalla celeste).
 - **Ajustes del jugador** (menú de pausa):
-  - **Resolución**: barra de 1 a 100 % de la pantalla real; es el tope y baja sola para mantener 60 FPS (`Quality.applyResolution`).
+  - **Resolución**: barra de 1 a 100 % de la pantalla real, fija (`Quality.applyResolution`).
+  - **Modo rendimiento**: encendido por defecto en celular; recarga la página.
   - **Reflejos en el agua**: apagarlos evita renderizar el mundo dos veces. En celular los reflejos usan menos resolución.
 
 ## Recetas

@@ -127,7 +127,7 @@ Principios clave:
      376 a 87.
    - Sin luces puntuales: los faroles usan un sprite de brillo en su lugar.
    - Materiales Lambert en lugar de Standard.
-   - Calidad adaptativa (`Quality.js`).
+   - Calidad (`Quality.js`): resolución fija y Modo rendimiento.
    - *Ojo*: el panel de vista previa de la app es lento con cualquier canvas WebGPU. Ahí no se
      puede medir el rendimiento real.
 3. **Mapa (Tab)**: canvas 2D con las islas y la posición del bote, orientado como la cámara.
@@ -254,9 +254,8 @@ Principios clave:
 
 24. **FPS: solo resolución adaptativa** (6 de noviembre de 2026), en `Quality.js`:
     - se probaron niveles automáticos y luego modos manuales (Rendimiento/Medio/Alta gama); **no le
-      gustaron** (molestaban, y cambiar en vivo dejaba la pantalla celeste). **Se quitaron. No volver a
-      ponerlos**: los gráficos son siempre los mismos (sombras 2048 en PC / 1024 en celular, reflejos,
-      bloom, tilt-shift);
+      gustaron** (molestaban, y cambiar en vivo dejaba la pantalla celeste). Se quitaron (ver el punto 27:
+      después pidió un solo **Modo rendimiento** que no baje la resolución);
     - Pausa → **Resolución** es una barra de 1 a 100 % de la resolución real de la pantalla (tope ×2).
       Es el máximo: si los FPS bajan de 55 la resolución baja sola (de golpe si la caída es grande,
       proporcional a √(fps/60), hasta ×0,5) y sube de a poco tras 3 medidas buenas;
@@ -287,6 +286,15 @@ Principios clave:
       Lighthouse, pero "Zarpar" se habilitaba ~4 s más tarde y el primer frame igual congelaba ~1 s;
     - Lighthouse local (móvil): Accesibilidad, Prácticas y SEO en 100; Rendimiento ~0,7. Lo que queda es
       el TBT del primer frame (compilar shaders, ~1 s real) y el bundle de ~2 MB gzip.
+27. **Resolución fija y Modo rendimiento** (6 de noviembre de 2026). **No le gusta que la resolución cambie
+    sola** (en celular se notaba). Ahora:
+    - la resolución es exactamente la de la barra **Resolución** (1–100 % de la pantalla real, tope ×2).
+      **No volver a poner resolución automática**;
+    - Pausa → **Modo rendimiento**: sin sombras (`shadowMap` y `castShadow` apagados), sin reflejos y sin
+      tilt-shift, **con la misma resolución**. El bloom se queda. Viene encendido en celular y apagado en
+      PC (se guarda la primera vez). Cambiarlo **recarga la página**, porque cambiar sombras o pases en
+      vivo dejaba la pantalla celeste;
+    - con el modo encendido, el interruptor "Reflejos en el agua" aparece deshabilitado.
 
 ### Errores visuales ya resueltos (por si reaparecen)
 

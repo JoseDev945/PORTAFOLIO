@@ -90,8 +90,13 @@
                 <input type="range" id="resolution-input" min="0.01" max="1" step="0.01" data-setting="resolution" />
             </div>
             <label class="toggle">
+                <span>Modo rendimiento <small>Sin sombras, reflejos ni desenfoque; misma resolución. Recarga la página.</small></span>
+                <input type="checkbox" data-setting="performance" />
+                <i></i>
+            </label>
+            <label class="toggle">
                 <span>Reflejos en el agua</span>
-                <input type="checkbox" data-setting="reflections" />
+                <input type="checkbox" id="reflections-input" data-setting="reflections" />
                 <i></i>
             </label>
             <label class="toggle">
