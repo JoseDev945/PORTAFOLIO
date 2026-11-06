@@ -295,6 +295,20 @@ Principios clave:
       PC (se guarda la primera vez). Cambiarlo **recarga la página**, porque cambiar sombras o pases en
       vivo dejaba la pantalla celeste;
     - con el modo encendido, el interruptor "Reflejos en el agua" aparece deshabilitado.
+28. **FPS en PC: sin MSAA, agua ligera** (6 de noviembre de 2026). En su PC los FPS eran malos y el modo
+    rendimiento "era peor". Medido en esta laptop (AMD Radeon integrada, 1904×929, Chrome con GPU real):
+    normal 19 FPS, modo rendimiento 21. Con 25 % de resolución, 99 FPS: el límite eran los píxeles.
+    - **El MSAA era lo más caro.** Estaba encendido en PC con pantalla de densidad 1, y three lo aplica
+      también al pase de escena (2 destinos MRT) y a las copias de pantalla del agua. Ahora se usa **FXAA**
+      (una pasada al final, `Rendering.setPipeline`, casi sin costo). `?aa=fxaa|msaa|0` fuerza uno;
+    - **el agua era lo segundo**: la refracción copia la pantalla y su profundidad cada frame. En modo
+      rendimiento, `Water({ lite })` no copia nada: calcula la profundidad con la distancia a la orilla y
+      deja ver el fondo, los peces y los arrecifes con mezcla alfa normal (sin el temblor de la refracción);
+    - resultado en esa laptop: **modo rendimiento 56-74 FPS** (antes 21), **normal ~28** (antes 19).
+      El normal sigue pesado en GPUs integradas (refracción, reflejos, sombras, tilt-shift);
+    - para medir FPS en una GPU real: Chrome headless con `--enable-gpu --use-angle=d3d11` y CDP
+      (el script estaba en el scratchpad). **Borrar el `--user-data-dir` temporal después de cada corrida**:
+      llenaron el disco una vez.
 
 ### Errores visuales ya resueltos (por si reaparecen)
 

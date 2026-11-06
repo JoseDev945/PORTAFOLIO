@@ -44,8 +44,13 @@ function sineNoise(xz, time) {
 //   - foam on crests and beaches, sun glints that feed the bloom
 // Under it, a seabed mesh follows the camera like the water grid does.
 export class Water {
-    constructor({ scene, islands, sunDirection, skyColor, reflections = { enabled: true, resolution: 0.4 } }) {
+    // lite ("Modo rendimiento"): the seabed and sea life show through by plain
+    // alpha blending, with the depth guessed from the distance to the shore,
+    // instead of copying the screen and its depth every frame for the
+    // refraction. That copy was most of the GPU time on laptops.
+    constructor({ scene, islands, sunDirection, skyColor, reflections = { enabled: true, resolution: 0.4 }, lite = false }) {
         this.scene = scene
+        this.lite = lite
         this.uniforms = {
             time: uniform(0),
             offset: uniform(new THREE.Vector2()),
@@ -130,25 +135,34 @@ export class Water {
         const noise = sineNoise(vWorld.xz, u.time)
         const shore = shoreDistance(vWorld.xz, islands)
 
-        // --- What's under the surface (refraction + absorption) ---
-        const sceneViewZ = (uv) => perspectiveDepthToViewZ(viewportDepthTexture(uv), cameraNear, cameraFar)
-        const bentUV = screenUV.add(normal.xz.mul(u.refraction))
-        // Don't bend in things that are in front of the water (a hull above it)
-        const bentIsBehind = step(sceneViewZ(bentUV), positionView.z)
-        const refractUV = mix(screenUV, bentUV, bentIsBehind)
-        // Meters of water the light crossed between the bottom and the surface
-        const thickness = max(positionView.z.sub(sceneViewZ(refractUV)), 0)
-        const transmittance = exp(u.absorption.negate().mul(thickness))
-        const below = viewportSharedTexture(refractUV).rgb
-
+        const facing = max(normal.dot(viewDirection), 0)
         const heightFactor = smoothstep(-0.5, 0.6, vWorld.y)
         const diffuse = max(normal.dot(u.sunDirection), 0).mul(0.35).add(0.75)
         // Color of the water itself (light scattered inside it), turquoise in the shallows
         const scatter = mix(mix(u.deepColor, u.surfaceColor, heightFactor), u.shallowColor, smoothstep(7, 1, shore).mul(0.5)).mul(diffuse)
+
+        // --- What's under the surface (refraction + absorption) ---
+        let thickness, below
+        if (this.lite) {
+            // Same depth as the seabed mesh, crossed at an angle. What's below is
+            // left out (black) here and added by plain alpha blending at the end
+            const depth = mix(float(1), float(16), smoothstep(0, 40, shore)).add(vWorld.y)
+            thickness = depth.div(max(facing, 0.25))
+            below = vec3(0)
+        } else {
+            const sceneViewZ = (uv) => perspectiveDepthToViewZ(viewportDepthTexture(uv), cameraNear, cameraFar)
+            const bentUV = screenUV.add(normal.xz.mul(u.refraction))
+            // Don't bend in things that are in front of the water (a hull above it)
+            const bentIsBehind = step(sceneViewZ(bentUV), positionView.z)
+            const refractUV = mix(screenUV, bentUV, bentIsBehind)
+            // Meters of water the light crossed between the bottom and the surface
+            thickness = max(positionView.z.sub(sceneViewZ(refractUV)), 0)
+            below = viewportSharedTexture(refractUV).rgb
+        }
+        const transmittance = exp(u.absorption.negate().mul(thickness))
         const underwater = below.mul(transmittance).add(scatter.mul(float(1).sub(transmittance)))
 
         // --- Reflection (Schlick fresnel: little from above, a mirror at grazing angles) ---
-        const facing = max(normal.dot(viewDirection), 0)
         const fresnel = float(0.04).add(float(0.96).mul(pow(float(1).sub(facing), 5))).mul(u.reflectionStrength)
         let reflected = u.skyColor
         if (this.reflections.enabled) {
@@ -178,6 +192,18 @@ export class Water {
         const foam = max(max(crestFoam.mul(0.45), shoreFoam), foamLines)
         surface = mix(surface, u.foamColor.mul(diffuse), foam)
 
+        if (this.lite) {
+            // Everything above is linear in "below": its weight is how much of the
+            // seabed, fish and reefs shows through. That becomes the alpha, so the
+            // blending adds them back without copying the screen (no wobble, though)
+            // One alpha can't tint per channel: red and green (the ones water
+            // absorbs) decide, so the sand fades into blue like the real thing
+            const belowWeight = transmittance.x.add(transmittance.y).mul(0.5)
+                .mul(float(1).sub(clamp(fresnel, 0, 1))).mul(float(1).sub(foam))
+            const alpha = float(1).sub(belowWeight)
+            material.opacityNode = alpha
+            surface = surface.div(max(alpha, 0.001))
+        }
         material.colorNode = surface
         // Sun glints go to the emissive channel so the bloom makes them sparkle
         const halfVector = normalize(u.sunDirection.add(viewDirection))

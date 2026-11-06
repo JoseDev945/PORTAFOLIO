@@ -127,8 +127,10 @@ celular. El modo elegido se guarda en los ajustes (`settings.camera`).
   - Paneles **Gráficos** (activar cada efecto y sus intensidades), **Día y noche** (hora, minutos por día,
     pausar) y **Olas y viento**.
 - **FPS** (`Quality.js`): nada cambia solo. La resolución es fija (la de la barra) y el único modo es
-  **Modo rendimiento** (`Quality.preset`: sin sombras, reflejos ni tilt-shift; misma resolución). Se lee al
-  cargar y cambiarlo recarga la página (cambiar sombras o pases en vivo dejaba la pantalla celeste).
+  **Modo rendimiento** (`Quality.preset`: sin sombras, reflejos ni tilt-shift, agua ligera sin copias de
+  pantalla; misma resolución). Se lee al cargar y cambiarlo recarga la página (cambiar sombras o pases en
+  vivo dejaba la pantalla celeste). Suavizado: FXAA al final del pipeline en pantallas de densidad 1, nunca
+  MSAA (multiplicaba el costo del pase MRT y del agua).
 - **Ajustes del jugador** (menú de pausa):
   - **Resolución**: barra de 1 a 100 % de la pantalla real, fija (`Quality.applyResolution`).
   - **Modo rendimiento**: encendido por defecto en celular; recarga la página.

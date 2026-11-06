@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu'
-import { pass, mrt, output, emissive, uniform, screenUV, smoothstep, mix, vec2, vec4, float, saturation } from 'three/tsl'
+import { pass, mrt, output, emissive, uniform, screenUV, smoothstep, mix, vec2, vec4, float, saturation, renderOutput } from 'three/tsl'
 import { bloom } from 'three/addons/tsl/display/BloomNode.js'
+import { fxaa } from 'three/addons/tsl/display/FXAANode.js'
 import { gaussianBlur } from 'three/addons/tsl/display/GaussianBlurNode.js'
 import { Game } from './Game.js'
 import { TickOrder } from './Ticker.js'
@@ -33,6 +34,8 @@ export class Rendering {
             enabled: params.get('post') !== 'off',
             bloom: true,
             tiltShift: quality.preset.tiltShift,
+            // Edge smoothing as one cheap pass at the end (MSAA cost 2-4× the FPS on laptops)
+            fxaa: quality.fxaa,
             // The miniature look only makes sense seen from above: off in the boat cameras
             overview: true,
             grading: true
@@ -105,7 +108,11 @@ export class Rendering {
             color = vec4(graded, 1)
         }
 
+        // FXAA needs the final image (tone mapped, sRGB), so it does that conversion itself
+        if (this.effects.fxaa) color = fxaa(renderOutput(color))
+
         this.pipeline ??= new THREE.RenderPipeline(this.renderer)
+        this.pipeline.outputColorTransform = !this.effects.fxaa
         this.pipeline.outputNode = color
         this.pipeline.needsUpdate = true
     }
@@ -120,6 +127,7 @@ export class Rendering {
             folder.addBinding(this.effects, 'tiltShift', { label: 'tilt-shift' }).on('change', rebuild)
             folder.addBinding(this.uniforms.focusBand, 'value', { label: 'zona nítida', min: 0, max: 0.5 })
             folder.addBinding(this.effects, 'grading', { label: 'color' }).on('change', rebuild)
+            folder.addBinding(this.effects, 'fxaa', { label: 'FXAA' }).on('change', rebuild)
             folder.addBinding(this.uniforms.saturation, 'value', { label: 'saturación', min: 0, max: 2 })
             folder.addBinding(this.uniforms.contrast, 'value', { label: 'contraste', min: 0.5, max: 1.5 })
             folder.addBinding(this.uniforms.vignette, 'value', { label: 'viñeta', min: 0, max: 1 })

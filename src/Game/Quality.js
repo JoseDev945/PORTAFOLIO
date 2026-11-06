@@ -29,11 +29,17 @@ export class Quality {
             reflections: !this.performance,
             // Fraction of the screen (CSS pixels) the water reflection is rendered at
             reflectionResolution: this.isMobile ? 0.25 : 0.4,
-            tiltShift: !this.performance
+            tiltShift: !this.performance,
+            // Opaque water without screen copies (see Water.js)
+            liteWater: this.performance
         }
-        // MSAA multiplies the cost of every pass (the scene renders to several
-        // targets): only on plain screens, where jagged edges show the most
-        this.antialias = !this.isMobile && window.devicePixelRatio <= 1
+        // Edge smoothing only on plain screens (density 1), where jagged edges
+        // show the most. FXAA, not MSAA: MSAA multiplies the cost of the scene
+        // pass (two targets) and of the water's screen copies; on a laptop GPU it
+        // took the game from 73 to 39 FPS. ?aa=fxaa|msaa|0 forces one, to compare
+        const aa = params.get('aa')
+        this.antialias = aa === 'msaa'
+        this.fxaa = aa !== null ? aa === 'fxaa' : !this.isMobile && window.devicePixelRatio <= 1
 
         this.applyResolution()
         this.game.events.on('settings:change', (key) => {

@@ -69,7 +69,8 @@ export class World {
             islands: [],
             sunDirection: this.lighting.sunDirection,
             skyColor: HORIZON,
-            reflections: this.reflectionOptions()
+            reflections: this.reflectionOptions(),
+            lite: this.game.quality.preset.liteWater
         })
         // Reflections render the world a second time: "Reflejos en el agua" can turn them off
         const reflectionSize = () => this.water.setPixelRatio(this.game.quality.pixelRatio)
