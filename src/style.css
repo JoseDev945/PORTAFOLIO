@@ -910,7 +910,7 @@ html.touch .project-card a {
 
 html.touch .character-prompt {
     bottom: auto;
-    top: calc(16px + env(safe-area-inset-top));
+    top: calc(60px + env(safe-area-inset-top));
 }
 
 /* Touch button only on boats with a walkable deck */
@@ -921,7 +921,7 @@ html:not(.has-deck) .deck-only {
 /* Walk / sit button: a row above the others */
 html.has-deck .touch-buttons {
     grid-template-areas:
-        '. lights character'
+        '. . character'
         'respawn map camera'
         'boost boost boost';
 }
@@ -930,9 +930,6 @@ html.has-deck .touch-buttons {
     grid-area: character;
 }
 
-.touch-button[data-action='lights'] {
-    grid-area: lights;
-}
 
 /* Fishing: catch messages, tub counter and the 🎣 touch button */
 .fish-toast {
@@ -959,20 +956,6 @@ html.has-deck .touch-buttons {
     opacity: 1;
 }
 
-html:not(.has-fishing) .fish-only {
-    display: none;
-}
-
-html.has-fishing .touch-buttons {
-    grid-template-areas:
-        '. . fish'
-        'respawn map camera'
-        'boost boost boost';
-}
-
-.touch-button[data-action='fish'] {
-    grid-area: fish;
-}
 
 /* Screenshot of the project on its card */
 .project-image {
@@ -1038,13 +1021,6 @@ html.touch .project-image {
     background: #ffd166;
 }
 
-/* Walkable deck and fishing on the same boat (Corvina) */
-html.has-deck.has-fishing .touch-buttons {
-    grid-template-areas:
-        'fish lights character'
-        'respawn map camera'
-        'boost boost boost';
-}
 
 /* Fullscreen toggle, next to ⚙ (see UI/FullscreenButton.js) */
 .fullscreen-button {
@@ -1145,4 +1121,55 @@ html.touch .boat-card .boat-use {
     padding: 0.5em 1em;
     font-size: 0.8rem;
     white-space: nowrap;
+}
+
+/* Prompt parts: plain text on desktop, tappable pills on touch (lights, take a rod…) */
+.prompt-item {
+    padding: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+}
+
+html.touch .character-prompt {
+    display: flex;
+    gap: 8px;
+    padding: 0;
+    background: none;
+    font-size: 0;
+}
+
+html.touch .character-prompt.visible {
+    pointer-events: auto;
+}
+
+html.touch .prompt-item {
+    padding: 9px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 999px;
+    background: rgba(8, 30, 60, 0.8);
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    touch-action: manipulation;
+}
+
+html.touch .prompt-item:active {
+    background: rgba(255, 179, 71, 0.85);
+    color: #3a1d00;
+}
+
+/* With a rod in hand the TURBO button casts and reels instead */
+.rod-button {
+    display: none;
+    font-size: 2.2rem;
+}
+
+html.has-rod .rod-button {
+    display: grid;
+}
+
+html.has-rod .touch-button[data-hold='boost'] {
+    display: none;
 }

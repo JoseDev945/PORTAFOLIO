@@ -1,7 +1,9 @@
 import { Game } from '../Game.js'
 import { keyLabel } from '../utils/keys.js'
 
-// "F Sentarte · L Encender luces": what the on-board keys do right now
+// "F Sentarte · L Encender luces": what the on-board keys do right now.
+// On touch screens each part is a button: tapping it does the action, so
+// there's no need for a 💡 or 🎣 button on screen.
 const ICONS = { character: '🚶', lights: '💡', fish: '🎣' }
 
 export class CharacterPrompt {
@@ -31,13 +33,21 @@ export class CharacterPrompt {
         const parts = []
         this.prompt.forEach(({ action, label }, i) => {
             if (i > 0) parts.push(' · ')
+            const item = document.createElement('button')
+            item.className = 'prompt-item'
+            item.tabIndex = -1
+            item.addEventListener('click', () => {
+                this.game.inputs.press(action)
+                this.game.inputs.down.delete(action)
+            })
             const kbd = document.createElement('kbd')
             kbd.className = 'desktop-only'
             kbd.textContent = keyLabel(this.game.inputs.keysFor(action)[0])
             const icon = document.createElement('span')
             icon.className = 'touch-only'
             icon.textContent = ICONS[action] ?? ''
-            parts.push(kbd, icon, ` ${label}`)
+            item.append(kbd, icon, ` ${label}`)
+            parts.push(item)
         })
         this.element.replaceChildren(...parts)
     }

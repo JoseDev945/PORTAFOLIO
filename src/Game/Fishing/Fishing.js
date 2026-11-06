@@ -157,7 +157,7 @@ export class Fishing {
 
     reset() {
         this.state = 'idle'
-        this.equipped = false
+        this.setEquipped(false)
         this.hand.visible = false
         this.bobber.visible = false
         this.line.visible = false
@@ -176,7 +176,7 @@ export class Fishing {
         if (view.mode !== 'first') {
             // Fishing is done in first person: aim at a rod with the crosshair
             this.game.settings.set('camera', 'first')
-            this.toast(isTouch() ? 'Apunta a una caña del porta cañas y toca 🎣' : `Apunta a una caña del porta cañas y pulsa ${keyLabel(this.game.inputs.keysFor('fish')[0])}`)
+            this.toast(isTouch() ? 'Apunta a una caña del porta cañas y toca «Tomar caña» arriba' : `Apunta a una caña del porta cañas y pulsa ${keyLabel(this.game.inputs.keysFor('fish')[0])}`)
             return
         }
         if (!this.equipped) {
@@ -190,12 +190,18 @@ export class Fishing {
         else this.cast()
     }
 
+    // On touch screens the TURBO button turns into cast / reel while a rod is in hand
+    setEquipped(equipped) {
+        this.equipped = equipped
+        document.documentElement.classList.toggle('has-rod', equipped)
+    }
+
     // Takes the rod of a holder
     equip(slot) {
         if (this.equipped || !this.gear) return
         this.holderRod = slot.rod
         this.holderRod.visible = false
-        this.equipped = true
+        this.setEquipped(true)
         this.hand.visible = true
         this.animate('equip')
     }
@@ -204,7 +210,7 @@ export class Fishing {
     stow() {
         if (!this.equipped) return
         this.retrieve()
-        this.equipped = false
+        this.setEquipped(false)
         this.hand.visible = false
         if (this.holderRod) this.holderRod.visible = true
         this.holderRod = null

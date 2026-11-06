@@ -247,7 +247,10 @@ Principios clave:
     - la **tarjeta de isla** tiene ✕ (se oculta hasta salir de la zona); la **de botes**, en celular, es
       una píldora con nombre y botón;
     - en celular ya no aparecen teclas: el botón del bote no dice "(Enter)", el aviso de cámara dice
-      "arrastra para mirar" y el de pesca dice "toca 🎣".
+      "arrastra para mirar" y el de pesca dice "toca «Tomar caña» arriba".
+    - **avisos tocables en celular**: el aviso de arriba (Tomar caña, Encender luces, Sentarte…) es
+      un botón; se quitaron los botones 💡 y 🎣. Con la caña en la mano, **TURBO se vuelve 🎣**
+      (lanzar / recoger) gracias a la clase `has-rod` que pone `Fishing.setEquipped`.
 
 ### Errores visuales ya resueltos (por si reaparecen)
 
