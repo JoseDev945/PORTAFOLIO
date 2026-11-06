@@ -13,8 +13,8 @@
   **El código y sus comentarios van en inglés.**
 - Trabajo en Windows 11, en `C:\Users\termi\Desktop\Portafolio`.
 - Uso **pnpm** (no npm), por seguridad.
-- **No quiero hacer commits ni subir a git todavía.** El repositorio está inicializado (rama
-  `master`) pero sin commits. No hagas commit ni push salvo que lo pida.
+- **Repositorio**: https://github.com/JoseDev945/PORTAFOLIO (rama `main`, primer push el 6 de
+  noviembre de 2026). No hagas commit ni push salvo que lo pida.
 - Pruebo en el navegador. Cuando algo falla, lo digo con mis palabras ("parpadea", "tiembla",
   "va lento").
 - **No verifiques en el navegador** (gasta muchos tokens): revisa con `node --check` y `pnpm build`;
@@ -320,4 +320,3 @@ Principios clave:
   - modelos de Blender (`.glb`) con un sistema `Resources`;
   - música real (Howler);
   - más interacciones con zonas (por ejemplo, cambiar el color del bote).
-- **Git**: el usuario todavía no quiere hacer commit.
