@@ -101,7 +101,9 @@ celular. El modo elegido se guarda en los ajustes (`settings.camera`).
 - La posición de los ojos del piloto depende del tipo de bote: `eyeOffset()` en `BoatMesh.js` la
   calcula según `layout` y tamaño.
 - Al cambiar de modo se dispara `camera:change`:
-  - `Rendering` apaga el tilt-shift fuera de la vista general.
+  - El tilt-shift se apaga fuera de la vista general con un uniform (`Rendering.uniforms.overview`, con
+    transición suave). **No se reconstruye el post-procesado** al cambiar de cámara: eso recompilaba todos
+    sus shaders y bajaban los FPS un momento.
   - `World` acerca la niebla para ocultar el borde del agua en el horizonte.
   - `CameraToast` muestra el nombre del modo.
 
@@ -110,6 +112,7 @@ celular. El modo elegido se guarda en los ajustes (`settings.camera`).
 | Capa | Dónde | Qué hace |
 |---|---|---|
 | Post-procesado | `Rendering.js` | **Bloom**: solo brilla lo emisivo, gracias a un canal aparte (MRT). **Tilt-shift**: efecto maqueta. **Color**: saturación, contraste y viñeta |
+| Pantalla de inicio | `Rendering.introNode`, `UI/StartScreen.js` | Estilo Bruno Simon: suelo oscuro con marcas × y líneas, y un **disco brillante** alrededor del bote; la escena solo se ve dentro de él (cada píxel se reconstruye a posición de mundo con la profundidad). Al hacer clic el disco se abre a todo el mundo, la cámara se aleja y el efecto se quita del pipeline |
 | Día y noche | `World/DayCycle.js` | Fotogramas clave (noche, amanecer, mañana, tarde, atardecer, anochecer) que se interpolan: cielo, niebla, sol/luna, luz ambiente, colores del agua, brillo de luces y estrellas |
 | Agua | `World/Water.js` | Estilo "shader de Minecraft". Es **transparente**: se ve el fondo marino y se vuelve azul con la profundidad (absorción por canal, `absorption`). Tiene **refracción** (lo de abajo ondula con las olas), **reflejos reales** del mundo (`reflector`, más fuertes en ángulos rasantes según Fresnel), espuma, líneas de espuma en la playa y destellos del sol para el bloom. Abajo hay un **fondo marino** de arena con cáusticas, de 1 m junto a las islas a 16 m en mar abierto |
 | Viento | `World/materials.js` | Las palmeras se mecen con un shader de vértices (`windMaterial`) |
@@ -133,7 +136,8 @@ celular. El modo elegido se guarda en los ajustes (`settings.camera`).
   MSAA (multiplicaba el costo del pase MRT y del agua).
 - **Ajustes del jugador** (menú de pausa):
   - **Resolución**: barra de 1 a 100 % de la pantalla real, fija (`Quality.applyResolution`).
-  - **Modo rendimiento**: encendido por defecto en celular; recarga la página.
+  - **Modo rendimiento**: encendido por defecto para todos (al empezar sale un aviso corto) hasta que el
+    jugador lo cambia; desde entonces se respeta su elección (`settings.performanceChosen`). Recarga la página.
   - **Reflejos en el agua**: apagarlos evita renderizar el mundo dos veces. En celular los reflejos usan menos resolución.
 
 ## Recetas
@@ -406,7 +410,7 @@ Estilo Minecraft, en primera persona, en botes cuyo modelo trae porta cañas y t
 | `settings:change` | `key, value` | Settings | View, Audio, Boat, BoatCard |
 | `quality:change` | — | Quality | Rendering |
 | `ui:click` | — | WorldMap | Audio |
-| `camera:change` | `mode` | View | Rendering, World, CameraToast |
+| `camera:change` | `mode` | View | World, CameraToast |
 | `action:<nombre>` | — | Inputs | Game |
 
 ## Qué pasa con cada tipo de error

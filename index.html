@@ -8,16 +8,39 @@
     <meta name="description" content="Portafolio interactivo en 3D: navega en bote entre islas para descubrir mis proyectos." />
     <title>Portafolio — Bote</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9B%B5%3C/text%3E%3C/svg%3E" />
+    <!-- Hand-written font of the start screen -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&display=swap" />
     <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body>
     <canvas class="webgl"></canvas>
 
     <main class="start" id="start">
-        <div class="start-card">
-            <h1>Mi Portafolio</h1>
-            <p>Navega entre las islas para descubrir mis proyectos.</p>
-            <button id="start-button" disabled>Cargando…</button>
+        <!-- While loading: a pulsing ring. Then the 3D disc around the boat takes over (Rendering.introNode) -->
+        <div class="start-loader" aria-hidden="true"></div>
+        <!-- The whole screen is the button: click or tap anywhere to set sail -->
+        <button class="start-button" id="start-button" disabled>Zarpar</button>
+        <div class="start-call" aria-hidden="true">
+            <svg class="start-arrow" viewBox="0 0 140 90" fill="none">
+                <path d="M132 18 C 96 4, 52 10, 18 62" />
+                <path d="M14 34 L 17 64 L 44 54" />
+            </svg>
+            <div class="start-text">
+                <span class="desktop-only">Clic para<br>zarpar</span>
+                <span class="touch-only">Toca para<br>zarpar</span>
+            </div>
+        </div>
+        <button class="start-sound" id="start-sound" aria-label="Silenciar">
+            <svg viewBox="0 0 64 48" fill="none">
+                <path d="M6 17 L18 17 L32 5 L32 43 L18 31 L6 31 Z" />
+                <path class="sound-on" d="M40 17 C 44 21, 44 27, 40 31" />
+                <path class="sound-on" d="M47 11 C 55 19, 55 29, 47 37" />
+                <path class="sound-off" d="M41 16 L 57 32 M57 16 L 41 32" />
+            </svg>
+        </button>
+        <div class="start-keys">
             <div class="keys" data-hints="start"></div>
             <div class="keys-touch">
                 <span>Usa el joystick para navegar y <b>TURBO</b> para acelerar</span>

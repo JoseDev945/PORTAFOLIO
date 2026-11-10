@@ -1,7 +1,10 @@
 import { Game } from '../Game.js'
 
-// Fishing messages ("¡Pargo rojo de 2,3 kg!") and the tub counter, shown
-// while the boat has fishing gear
+const TUB_SECONDS = 3.5
+
+// Fishing messages ("¡Pargo rojo de 2,3 kg!") and the tub counter. The counter
+// only shows for a few seconds when it changes or the game starts, so it
+// doesn't stay in the way
 export class FishingHud {
     constructor() {
         this.game = Game.getInstance()
@@ -12,17 +15,30 @@ export class FishingHud {
         const { events } = this.game
         events.on('fishing:toast', (text) => this.toast(text))
         events.on('fishing:tub', (tub) => {
+            const changed = JSON.stringify(tub) !== JSON.stringify(this.tub)
             this.tub = tub
-            this.render()
+            if (changed) this.flash()
+            else this.render()
         })
-        events.on('start', () => this.render())
+        events.on('start', () => this.flash())
         events.on('pause', () => this.render())
         // Fishing was created before the UI: ask for its state once
         this.game.fishing?.emitTub()
     }
 
+    // Shows the counter for a moment
+    flash() {
+        this.showing = true
+        clearTimeout(this.tubTimeout)
+        this.tubTimeout = setTimeout(() => {
+            this.showing = false
+            this.render()
+        }, TUB_SECONDS * 1000)
+        this.render()
+    }
+
     render() {
-        const visible = Boolean(this.tub) && this.game.playing
+        const visible = Boolean(this.tub) && this.game.playing && this.showing
         this.tubElement.classList.toggle('visible', visible)
         if (!this.tub) return
         const { count, best } = this.tub

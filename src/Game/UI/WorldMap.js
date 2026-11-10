@@ -3,7 +3,7 @@ import { TickOrder } from '../Ticker.js'
 
 // Full world map (Tab). Drawn on a 2D canvas, oriented like the 3D camera so
 // "up" on the map is the direction the camera looks at.
-const WORLD_RADIUS = 110
+const WORLD_RADIUS = 170
 
 export class WorldMap {
     constructor() {

@@ -550,8 +550,9 @@ export class Fishing {
             else if (this.equipped) label = this.aimed ? 'Guardar caña' : 'Lanzar'
             else if (this.aimed) label = 'Tomar caña'
             else if (stopped && !first) label = 'Pescar (primera persona)'
-            // Touch screen in first person: only what the crosshair is on (TURBO is 🎣 with a rod)
-            if (first && isTouch() && !this.aimed && this.state !== 'bite') label = null
+            // Touch screens: only the rod the crosshair is on in first person, or
+            // the line while it's out (TURBO is 🎣 with a rod in hand)
+            if (isTouch() && this.state === 'idle' && !(first && this.aimed)) label = null
             // Desktop: the aimed rod gets its label next to it (F takes it, UI/AimLabel.js)
             if (first && !isTouch() && this.aimed && this.state === 'idle') label = null
         }

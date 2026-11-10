@@ -310,6 +310,37 @@ Principios clave:
       (el script estaba en el scratchpad). **Borrar el `--user-data-dir` temporal después de cada corrida**:
       llenaron el disco una vez.
 
+29. **Pantalla de inicio estilo Bruno Simon** (10 de noviembre de 2026). Quería el *estilo* de la
+    pantalla de carga de bruno-simon.com, no su contenido:
+    - mientras carga: fondo morado oscuro con un anillo que pulsa (HTML);
+    - cuando el juego dibuja: suelo oscuro con marcas × y líneas tenues, y un **disco brillante** alrededor
+      del bote que crece; solo dentro de él se ve el mundo y lo que el disco corta brilla en el borde
+      (`Rendering.introNode`, en el post-procesado);
+    - texto a mano **"CLIC PARA ZARPAR"** (fuente Amatic SC de Google Fonts) con flecha hacia el bote y un
+      altavoz que silencia o activa el sonido;
+    - clic, Enter o Espacio: el disco se abre a todo el mundo en 2 s, la cámara se aleja de 21 a 42 m y pasa
+      a la cámara guardada; luego el efecto se quita del pipeline para no costar FPS;
+    - con `?post=off` no hay disco: el mundo se ve directo detrás del texto.
+
+30. **Rendimiento por defecto, avisos e islas separadas** (10 de noviembre de 2026):
+    - el **Modo rendimiento** empieza encendido para todos y al zarpar sale "⚡ Modo rendimiento activado"
+      unos 4 s; si el jugador lo cambia en Pausa, se guarda su elección (`performanceChosen`);
+    - el contador de peces (🐟 Tina) ya no es permanente: sale 3,5 s al zarpar y cuando cambia;
+    - **en celular** los avisos de arriba solo salen al **apuntar en primera persona** a su objeto
+      (timón → tomar timón / luces; caña → tomar caña) o mientras la línea está en el agua; levantarse y
+      sentarse van por el botón 🚶;
+    - **islas separadas ×1,6** desde la isla de inicio (había lag por tener todo junto y la serpiente marina
+      cruzaba islas). El borde del mar pasó de 150 a 220 m y el mapa cubre 170 m;
+    - la serpiente revisa **todo su recorrido** (cada 8 m) y solo sale si queda a 9 m o más de cualquier costa.
+    - El bote inicial ya lo eligió el usuario (`playerBoat: 'galileo-corvina'`); el bote elegido en la
+      exhibición sigue ganando sobre él.
+
+31. **Sin caída de FPS al cambiar de cámara** (10 de noviembre de 2026). Cada cambio de cámara
+    reconstruía todo el post-procesado (el tilt-shift solo existía en la vista general), lo que recompilaba
+    bloom, desenfoque, color y FXAA. Ahora el tilt-shift siempre está en la cadena (si está activo) y se
+    apaga con un uniform que se desvanece. **Regla: nunca llamar `setPipeline()` por algo que pase
+    durante el juego**; usar uniforms.
+
 ### Errores visuales ya resueltos (por si reaparecen)
 
 - **Borda negra que parpadeaba** (ferry y Corvina): compartía caras con la pared blanca. Ahora va

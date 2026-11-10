@@ -9,6 +9,8 @@ const SPEED = 9
 const CHECK_EVERY = 18
 const CHANCE = 0.3
 const DEPTH = { hidden: 16, visible: 4.5 }
+// Open water needed on each side of its path (it's ~5 m wide plus the swim)
+const MIN_CLEARANCE = 9
 
 // Half width along the body (t: 0 head … 1 tail), with two pairs of fins
 function halfWidth(t) {
@@ -92,24 +94,36 @@ export class Serpent {
         }
     }
 
-    // A path crossing near the point the camera looks at, through open water if possible
+    // A path crossing near the point the camera looks at. Every point of it
+    // (head to tail, start to end) must be in open water, or it doesn't come
     start(target) {
+        const distance = 200
         let best = null
-        for (let i = 0; i < 6; i++) {
+        for (let i = 0; i < 12; i++) {
             const angle = Math.random() * Math.PI * 2
             const direction = new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle))
             const side = new THREE.Vector3(-direction.z, 0, direction.x).multiplyScalar((Math.random() - 0.5) * 30)
             const middle = target.clone().add(side)
-            const clear = shoreDistanceAt(middle.x, middle.z, this.islands)
+            const clear = this.clearance(middle, direction, distance + LENGTH)
             if (!best || clear > best.clear) best = { direction, middle, clear }
         }
-        if (!best || best.clear < 6) return
-        const distance = 200
+        if (!best || best.clear < MIN_CLEARANCE) return
         const from = best.middle.clone().addScaledVector(best.direction, -distance / 2)
         this.active = { from, direction: best.direction, distance: distance + LENGTH, travelled: 0 }
         this.mesh.rotation.y = Math.atan2(best.direction.x, best.direction.z)
         this.mesh.position.set(from.x, -DEPTH.hidden, from.z)
         this.mesh.visible = true
         this.sound('rumble')
+    }
+
+    // Smallest distance to a shore along the whole path (sampled every 8 m)
+    clearance(middle, direction, length) {
+        let clear = Infinity
+        for (let d = -length / 2; d <= length / 2; d += 8) {
+            const x = middle.x + direction.x * d
+            const z = middle.z + direction.z * d
+            clear = Math.min(clear, shoreDistanceAt(x, z, this.islands))
+        }
+        return clear
     }
 }

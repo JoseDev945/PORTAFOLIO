@@ -18,6 +18,8 @@ const defaults = {
     resolution: 1,
     // No shadows, reflections or tilt-shift, same resolution (null = on in phones, see Quality.js)
     performance: null,
+    // True once the player switched "Modo rendimiento" themselves; until then it starts on
+    performanceChosen: false,
     // Real reflections of the world in the water (the most expensive effect)
     reflections: true,
     // FPS counter in the top right corner

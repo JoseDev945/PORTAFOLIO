@@ -35,59 +35,228 @@ kbd {
     text-align: center;
 }
 
-/* Start screen */
+/* Start screen (Bruno Simon style): the dark ground, the × marks and the
+   glowing disc are drawn in 3D (Rendering.introNode); this is the HTML on top */
 .start {
+    --start-ink: #f6ecff;
+    --start-glow: #b77cff;
     position: fixed;
     inset: 0;
-    display: grid;
-    place-items: center;
-    background: radial-gradient(circle at 50% 40%, rgba(12, 60, 110, 0.55), rgba(5, 20, 45, 0.85));
-    transition: opacity 0.8s ease;
+    background: #1f0f2b;
+    transition: background-color 0.7s ease, opacity 0.6s ease;
     z-index: 10;
+    font-family: 'Amatic SC', 'Comic Sans MS', cursive;
+    color: var(--start-ink);
 }
 
-.start.hidden {
+/* The game is drawing: let the 3D disc show through */
+.start.revealed {
+    background-color: transparent;
+}
+
+.start.done {
+    display: none;
+}
+
+/* Without post-processing there is no disc: the overlay just fades */
+.start.opening.plain {
     opacity: 0;
+}
+
+.start-loader {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 22vmin;
+    height: 13vmin;
+    border: 2px solid var(--start-ink);
+    border-radius: 50%;
+    box-shadow: 0 0 18px var(--start-glow), inset 0 0 14px var(--start-glow);
+    transform: translate(-50%, -50%);
+    animation: start-pulse 1.4s ease-in-out infinite;
+    transition: opacity 0.4s;
+}
+
+.start.revealed .start-loader {
+    opacity: 0;
+    animation: none;
+}
+
+@keyframes start-pulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(0.7); opacity: 0.5; }
+    50% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+/* Invisible, covers the screen: click anywhere */
+.start-button {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: none;
+    color: transparent;
+    font-size: 0;
+    cursor: pointer;
+}
+
+.start-button:disabled {
+    cursor: wait;
+}
+
+.start-call,
+.start-sound,
+.start-keys {
+    opacity: 0;
+    transition: opacity 0.6s ease;
+}
+
+.start.revealed .start-call,
+.start.revealed .start-sound,
+.start.revealed .start-keys {
+    opacity: 1;
+    transition-delay: 0.9s;
+}
+
+.start.opening .start-call,
+.start.opening .start-sound,
+.start.opening .start-keys {
+    opacity: 0;
+    transition-delay: 0s;
+    transition-duration: 0.3s;
+}
+
+/* Right of the boat (the screen center), with the arrow pointing at it */
+.start-call {
+    position: absolute;
+    left: calc(50% + 11vmin);
+    top: calc(50% - 25vmin);
     pointer-events: none;
 }
 
-.start-card {
-    text-align: center;
-    max-width: 440px;
-    padding: 0 16px;
-}
-
-.start h1 {
-    font-size: clamp(2rem, 7vw, 3.4rem);
-    letter-spacing: -0.02em;
-}
-
-.start p {
-    margin: 0.6em 0 1.6em;
-    opacity: 0.85;
-}
-
-.start button {
-    padding: 0.8em 2.4em;
-    border: none;
-    border-radius: 999px;
-    background: #ffb347;
-    color: #3a1d00;
-    font-family: inherit;
+.start-text {
+    margin-left: 13vmin;
+    font-size: clamp(2.6rem, 10vmin, 6.5rem);
     font-weight: 700;
-    font-size: 1.1rem;
+    line-height: 0.95;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    text-shadow: 0 0 14px rgba(183, 124, 255, 0.55);
+    transform: rotate(4deg);
+    animation: start-float 3s ease-in-out infinite;
+}
+
+.start-arrow {
+    position: absolute;
+    left: -2vmin;
+    top: 12vmin;
+    width: 15vmin;
+    stroke: var(--start-ink);
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 0 6px rgba(183, 124, 255, 0.6));
+    animation: start-nudge 1.6s ease-in-out infinite;
+}
+
+@keyframes start-float {
+    0%, 100% { transform: rotate(4deg) translateY(0); }
+    50% { transform: rotate(3deg) translateY(-0.8vmin); }
+}
+
+@keyframes start-nudge {
+    0%, 100% { translate: 0 0; }
+    50% { translate: -1.2vmin 0.6vmin; }
+}
+
+/* Speaker under the text: toggles music and effects */
+.start-sound {
+    position: absolute;
+    left: calc(50% + 25vmin);
+    top: calc(50% + 4vmin);
+    width: clamp(48px, 9vmin, 84px);
+    padding: 0;
+    border: none;
+    background: none;
     cursor: pointer;
-    box-shadow: 0 6px 0 #c47a1c;
-    transition: transform 0.15s;
 }
 
-.start button:hover:not(:disabled) {
-    transform: translateY(-2px);
+.start-sound svg {
+    width: 100%;
+    stroke: var(--start-ink);
+    stroke-width: 3.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 0 6px rgba(183, 124, 255, 0.6));
 }
 
-.start button:disabled {
-    opacity: 0.6;
-    cursor: wait;
+.start-sound .sound-off,
+.start-sound.muted .sound-on {
+    display: none;
+}
+
+.start-sound.muted .sound-off {
+    display: inline;
+}
+
+.start-keys {
+    position: absolute;
+    left: 50%;
+    bottom: calc(20px + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: calc(100vw - 32px);
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    text-align: center;
+    pointer-events: none;
+}
+
+.start-keys .keys,
+html.touch .start-keys .keys-touch {
+    margin-top: 0;
+    gap: 0.3em;
+    font-size: 0.78rem;
+    opacity: 0.7;
+}
+
+/* Portrait screens: the text goes under the boat, the arrow points up */
+@media (max-aspect-ratio: 1/1) {
+    .start-call {
+        left: 50%;
+        top: calc(50% + 12vmin);
+        transform: translateX(-50%);
+    }
+
+    .start-text {
+        margin-left: 0;
+        margin-top: 16vmin;
+        text-align: center;
+    }
+
+    .start-arrow {
+        left: 50%;
+        top: 0;
+        width: 18vmin;
+        margin-left: -9vmin;
+        rotate: 60deg;
+    }
+
+    .start-sound {
+        left: 50%;
+        top: auto;
+        bottom: calc(110px + env(safe-area-inset-bottom));
+        margin-left: calc(clamp(48px, 9vmin, 84px) / -2);
+    }
+}
+
+/* Everything else waits for the start screen to open */
+html.intro .hud,
+html.intro .pause-button,
+html.intro .fullscreen-button,
+html.intro .touch-controls,
+html.intro .character-prompt {
+    opacity: 0 !important;
+    pointer-events: none !important;
 }
 
 .keys {
@@ -540,7 +709,6 @@ html.touch .project-card a {
     right: calc(16px + env(safe-area-inset-right));
 }
 
-.start,
 .pause {
     overflow-y: auto;
     padding: 16px;
@@ -603,14 +771,6 @@ html.touch .project-card a {
     html.touch .project-card {
         top: calc(12px + env(safe-area-inset-top));
         width: min(360px, calc(100vw - 300px));
-    }
-
-    .start h1 {
-        font-size: 1.8rem;
-    }
-
-    .start p {
-        margin: 0.4em 0 1em;
     }
 
     .keys-touch,

@@ -11,7 +11,8 @@ const MAX_PIXEL_RATIO = 2
 //   shadows       sun shadows (a second render of the scene)
 //   reflections   water reflections (a third render)
 //   tiltShift     miniature blur in the overview
-// It's on by default on phones. Switching it reloads the page: rebuilding
+// It's on by default (a toast says so at the start) until the player turns it
+// off in the pause menu, then their choice is kept. Switching it reloads the page: rebuilding
 // shadows and passes on the fly left the screen light blue on some GPUs.
 // ?fps shows the counter. Triggers 'quality:change' when the resolution changes.
 export class Quality {
@@ -21,7 +22,7 @@ export class Quality {
         const params = new URLSearchParams(window.location.search)
         this.isMobile = window.matchMedia('(pointer: coarse)').matches || Math.min(window.innerWidth, window.innerHeight) < 600
 
-        if (typeof settings.get('performance') !== 'boolean') settings.set('performance', this.isMobile)
+        if (!settings.get('performanceChosen')) settings.set('performance', true)
         this.performance = settings.get('performance')
         this.preset = {
             shadows: !this.performance,
@@ -44,7 +45,10 @@ export class Quality {
         this.applyResolution()
         this.game.events.on('settings:change', (key) => {
             if (key === 'resolution') this.applyResolution()
-            if (key === 'performance') window.location.reload()
+            if (key === 'performance') {
+                this.game.settings.set('performanceChosen', true)
+                window.location.reload()
+            }
         })
 
         // FPS counter: "Mostrar FPS" in the pause menu, or always with ?fps / #debug

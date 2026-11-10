@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu'
-import { pass, mrt, output, emissive, uniform, screenUV, smoothstep, mix, vec2, vec4, float, saturation, renderOutput } from 'three/tsl'
+import { pass, mrt, output, emissive, uniform, screenUV, smoothstep, mix, vec2, vec3, vec4, float, saturation, renderOutput, getViewPosition, fract, fwidth, min, max, exp, step, select, color as colorNode } from 'three/tsl'
 import { bloom } from 'three/addons/tsl/display/BloomNode.js'
 import { fxaa } from 'three/addons/tsl/display/FXAANode.js'
 import { gaussianBlur } from 'three/addons/tsl/display/GaussianBlurNode.js'
@@ -11,6 +11,8 @@ import { TickOrder } from './Ticker.js'
 //   bloom      halo around everything emissive (lamps, buoy lights…)
 //   tilt-shift top and bottom of the screen blurred: looks like a miniature
 //   grading    saturation, contrast and a soft vignette
+//   intro      start screen: only a glowing disc around the boat is visible,
+//              over a dark ground with × marks; it opens up to the whole world
 // Each effect can be toggled with #debug; ?post=off disables all of them.
 export class Rendering {
     constructor() {
@@ -36,34 +38,44 @@ export class Rendering {
             tiltShift: quality.preset.tiltShift,
             // Edge smoothing as one cheap pass at the end (MSAA cost 2-4× the FPS on laptops)
             fxaa: quality.fxaa,
-            // The miniature look only makes sense seen from above: off in the boat cameras
-            overview: true,
-            grading: true
+            grading: true,
+            // Start screen disc, turned off for good once it has opened (see StartScreen)
+            intro: true
         }
         this.uniforms = {
             bloomStrength: uniform(1.1),
             tiltShift: uniform(1),
+            // 1 in the overview, 0 in the boat cameras: the miniature look only makes
+            // sense from above. A uniform eased in render(), not a pipeline rebuild:
+            // rebuilding recompiled every post-processing shader on each camera switch
+            overview: uniform(1),
             // Height of the sharp band in the middle of the screen (0 to 0.5)
             focusBand: uniform(0.16),
             saturation: uniform(1.18),
             contrast: uniform(1.08),
             vignette: uniform(0.35)
         }
+        // Start screen disc: world center and radius (m), glow strength, and the
+        // camera matrices to turn each pixel's depth back into a world position
+        this.intro = {
+            center: uniform(new THREE.Vector2()),
+            radius: uniform(0),
+            glow: uniform(1),
+            projectionInverse: uniform(new THREE.Matrix4()),
+            cameraWorld: uniform(new THREE.Matrix4()),
+            cameraPosition: uniform(new THREE.Vector3())
+        }
 
         window.addEventListener('resize', () => this.resize())
         this.game.events.on('quality:change', () => this.resize())
         this.game.ticker.on(() => this.render(), TickOrder.RENDER)
-        this.game.events.on('camera:change', (mode) => {
-            this.effects.overview = mode === 'overview'
-            this.setPipeline()
-        })
         this.setDebug()
     }
 
     async init() {
         this.resize()
         await this.renderer.init()
-        this.effects.overview = this.game.view.mode === 'overview'
+        this.uniforms.overview.value = this.game.view.mode === 'overview' ? 1 : 0
         this.setPipeline()
         // No renderer.compileAsync() here on purpose: tried it (Nov 2026) and
         // the start button unlocked ~4 s later while the first frame still froze
@@ -91,13 +103,15 @@ export class Rendering {
             color = color.add(glow.mul(u.bloomStrength))
         }
 
-        if (this.effects.tiltShift && this.effects.overview) {
+        if (this.effects.tiltShift) {
             // Half resolution: it's a blur anyway, and a quarter of the pixels to process
             const blurred = gaussianBlur(color, null, 3, { resolutionScale: 0.5 })
             const distance = screenUV.y.sub(0.5).abs()
-            const amount = smoothstep(u.focusBand, u.focusBand.add(0.3), distance).mul(u.tiltShift)
+            const amount = smoothstep(u.focusBand, u.focusBand.add(0.3), distance).mul(u.tiltShift).mul(u.overview)
             color = mix(color, blurred, amount)
         }
+
+        if (this.effects.intro) color = this.introNode(scenePass, color)
 
         if (this.effects.grading) {
             // In linear light, before tone mapping. Contrast pivots on middle gray (0.18 linear)
@@ -115,6 +129,56 @@ export class Rendering {
         this.pipeline.outputColorTransform = !this.effects.fxaa
         this.pipeline.outputNode = color
         this.pipeline.needsUpdate = true
+    }
+
+    // Start screen look (Bruno Simon style): the world is cut by a vertical
+    // cylinder around the boat. Inside it the scene, outside a dark ground plane
+    // with × marks and faint grid lines, and a glowing line where they meet
+    // (also on everything the cylinder slices: palms, docks…)
+    introNode(scenePass, sceneColor) {
+        const u = this.intro
+        // World position of what each pixel shows
+        const depth = scenePass.getTextureNode('depth').sample(screenUV).r
+        const toWorld = (view) => u.cameraWorld.mul(vec4(view, 1)).xyz
+        const world = toWorld(getViewPosition(screenUV, depth, u.projectionInverse))
+        // Where the pixel's ray meets the ground plane (y = 0), for the background
+        const far = toWorld(getViewPosition(screenUV, float(1), u.projectionInverse))
+        const ray = far.sub(u.cameraPosition).normalize()
+        const hits = ray.y.lessThan(-0.001)
+        const ground = u.cameraPosition.add(ray.mul(u.cameraPosition.y.negate().div(min(ray.y, -0.001)))).xz
+        const pixel = fwidth(ground).length().max(0.001)
+
+        // Background: dark plum ground, a × every 2.4 m, faint lines every 9.6 m
+        const cell = 2.4
+        const local = fract(ground.div(cell)).sub(0.5).mul(cell)
+        const diagonal = min(local.x.add(local.y).abs(), local.x.sub(local.y).abs()).mul(0.7071)
+        const cross = float(1).sub(smoothstep(pixel.mul(0.5), pixel.mul(1.5), diagonal))
+            .mul(float(1).sub(smoothstep(0.2, pixel.add(0.2), max(local.x.abs(), local.y.abs()))))
+        const big = fract(ground.div(cell * 4).add(0.5)).sub(0.5).abs().mul(cell * 4)
+        const line = float(1).sub(smoothstep(pixel.mul(0.3), pixel.mul(1.3), min(big.x, big.y)))
+        let background = mix(colorNode('#1f0f2b'), colorNode('#5c2f7a'), line.mul(0.45))
+        background = mix(background, colorNode('#9b5cf0'), cross.mul(0.85))
+        background = select(hits, background, colorNode('#1f0f2b'))
+
+        // Inside the disc: the scene. The glow uses the ground distance outside
+        // (a clean ring on the floor) and the real distance inside (sliced edges)
+        const sceneDistance = world.xz.sub(u.center).length()
+        const groundDistance = ground.sub(u.center).length()
+        const inside = float(1).sub(step(u.radius, sceneDistance))
+        const offset = mix(groundDistance, sceneDistance, inside).sub(u.radius).abs()
+        const core = float(1).sub(smoothstep(pixel.mul(1), pixel.mul(3), offset))
+        const halo = exp(offset.mul(-1.6)).mul(0.45)
+        const ring = vec3(colorNode('#c48bff')).mul(halo).add(vec3(colorNode('#f6ecff')).mul(core.mul(2.2)))
+
+        const base = mix(background, sceneColor.rgb, inside)
+        return vec4(base.add(ring.mul(u.glow)), 1)
+    }
+
+    // The disc has opened: drop the effect from the pipeline (it costs every frame)
+    endIntro() {
+        if (!this.effects.intro) return
+        this.effects.intro = false
+        this.setPipeline()
     }
 
     setDebug() {
@@ -144,6 +208,19 @@ export class Rendering {
 
     render() {
         if (window.innerWidth === 0 || window.innerHeight === 0) return
+        // Tilt-shift fades in and out with the overview camera
+        const overview = this.uniforms.overview
+        const target = this.game.view.mode === 'overview' ? 1 : 0
+        overview.value += (target - overview.value) * (1 - Math.exp(-this.game.ticker.delta * 6))
+        if (this.pipeline && this.effects.intro) {
+            const { camera } = this.game.view
+            camera.updateMatrixWorld()
+            this.intro.projectionInverse.value.copy(camera.projectionMatrixInverse)
+            this.intro.cameraWorld.value.copy(camera.matrixWorld)
+            this.intro.cameraPosition.value.copy(camera.position)
+            const boat = this.game.boat.mesh.position
+            this.intro.center.value.set(boat.x, boat.z)
+        }
         if (this.pipeline) this.pipeline.render()
         else this.renderer.render(this.scene, this.game.view.camera)
     }

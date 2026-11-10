@@ -21,6 +21,8 @@ export const CAMERA_NAMES = {
 }
 // Touch screens have no mouse: what the toast says instead
 export const CAMERA_NAMES_TOUCH = { ...CAMERA_NAMES, first: 'Primera persona · arrastra para mirar' }
+// Overview distance while the start screen shows (normal play starts at 42)
+const INTRO_DISTANCE = 21
 const FOV = { overview: 40, behind: 60, front: 60, first: 72 }
 
 const _euler = new THREE.Euler()
@@ -48,7 +50,11 @@ export class View {
         this.smoothTarget = new THREE.Vector3()
 
         const saved = this.game.settings.get('camera')
-        this.mode = CAMERA_MODES.includes(saved) ? saved : 'overview'
+        // The start screen is always seen from above, close to the boat; the
+        // player's camera comes back when it opens (endIntro)
+        this.introMode = CAMERA_MODES.includes(saved) ? saved : 'overview'
+        this.mode = 'overview'
+        this.distance = this.targetDistance = INTRO_DISTANCE
         // Boat modes: smoothed boat heading, orbit offsets from dragging, distance
         // orbit*Target is where the mouse asked to look; orbit* follows it smoothly
         this.chase = {
@@ -159,6 +165,12 @@ export class View {
             if (key === 'camera' && CAMERA_MODES.includes(value)) this.setMode(value)
         })
         this.game.ticker.on(() => this.update(), TickOrder.VIEW)
+    }
+
+    // Start screen opened: zoom out to the usual height and switch to the saved camera
+    endIntro() {
+        this.targetDistance = 42
+        this.setMode(this.introMode)
     }
 
     // Next mode in the cycle; saved so it's remembered next visit

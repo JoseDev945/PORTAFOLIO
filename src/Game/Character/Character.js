@@ -357,10 +357,12 @@ export class Character {
     // What the keys do right now: [{ action, label }, …]
     updatePrompt() {
         const prompt = []
-        // Touch screen in first person: only what the crosshair is on (🚶 has its own button)
-        if (isTouch() && this.game.view.mode === 'first') {
-            if (this.canUseHelm() && this.aimingAtHelm()) prompt.push({ action: 'lights', label: this.lightsOn ? 'Apagar luces' : 'Encender luces' })
-            this.setPrompt(prompt.length ? prompt : null)
+        // Touch screens: only what the crosshair is on in first person (aiming
+        // at the helm: take it / lights). Getting up and sitting use the 🚶
+        // button; the rod's prompt comes from Fishing
+        if (isTouch()) {
+            const aimed = this.aimedTarget()
+            this.setPrompt(aimed?.kind === 'helm' ? aimed.prompt : null)
             return
         }
         // On desktop what the crosshair is on gets its own label next to it (UI/AimLabel.js)

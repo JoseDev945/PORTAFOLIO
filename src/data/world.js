@@ -66,8 +66,8 @@ export const world = {
         // boats in the water.
         {
             id: 'astillero',
-            x: 58.3,
-            z: 21.2,
+            x: 93.3,
+            z: 33.9,
             radius: 20,
             seed: 100,
             project: 'astillero',
@@ -140,22 +140,22 @@ export const world = {
                 { type: 'lantern', x: 14.1, z: -9.5, y: 0.6 }
             ]
         },
-        { id: 'isla-dos', x: -6.1, z: 69.7, radius: 7, seed: 131, project: 'proyecto-dos', palms: 2 },
+        { id: 'isla-dos', x: -9.8, z: 111.5, radius: 7, seed: 131, project: 'proyecto-dos', palms: 2 },
         {
             id: 'isla-tres',
-            x: -65,
-            z: 11.5,
+            x: -104,
+            z: 18.4,
             radius: 9,
             seed: 162,
             project: 'proyecto-tres',
             palms: 2,
             props: [{ type: 'lighthouse', x: -3, z: -3 }]
         },
-        { id: 'isla-cuatro', x: -30.4, z: -65.3, radius: 7.5, seed: 193, project: 'proyecto-cuatro', palms: 4 },
-        { id: 'isla-cinco', x: 45.3, z: -45.3, radius: 8, seed: 224, project: 'proyecto-cinco', palms: 3 },
+        { id: 'isla-cuatro', x: -48.6, z: -104.5, radius: 7.5, seed: 193, project: 'proyecto-cuatro', palms: 4 },
+        { id: 'isla-cinco', x: 72.5, z: -72.5, radius: 8, seed: 224, project: 'proyecto-cinco', palms: 3 },
 
         // Small decorative islet without project
-        { id: 'islote', x: 30, z: 60, radius: 4, seed: 5, palms: 1, rocks: 1, shoreRocks: 3, dock: false }
+        { id: 'islote', x: 48, z: 96, radius: 4, seed: 5, palms: 1, rocks: 1, shoreRocks: 3, dock: false }
     ],
 
     // Objects in open water (catalog in src/Game/World/props/)

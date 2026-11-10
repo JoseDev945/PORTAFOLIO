@@ -4,6 +4,9 @@ import { Game } from '../Game.js'
 import { TickOrder } from '../Ticker.js'
 import { createBoatMesh, boatHalfExtents, resolveBoat, eyeOffset } from './BoatMesh.js'
 
+// Distance from the center where the sea starts pushing the boat back
+const WORLD_EDGE = 220
+
 const IDLE_CONTROLS = { throttle: 0, steer: 0, boost: false }
 
 const _quaternion = new THREE.Quaternion()
@@ -257,8 +260,8 @@ export class Boat {
 
         // Soft world boundary
         const distance = Math.hypot(translation.x, translation.z)
-        if (distance > 150) {
-            const push = (distance - 150) * this.mass * 0.05
+        if (distance > WORLD_EDGE) {
+            const push = (distance - WORLD_EDGE) * this.mass * 0.05
             this.body.applyImpulse({ x: (-translation.x / distance) * push, y: 0, z: (-translation.z / distance) * push }, true)
         }
     }
