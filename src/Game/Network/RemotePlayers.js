@@ -17,6 +17,34 @@ const JUMP = 15
 
 const _qa = new THREE.Quaternion()
 const _qb = new THREE.Quaternion()
+const _mine = new THREE.Quaternion()
+const _forward = new THREE.Vector3()
+const _theirs = new THREE.Vector3()
+
+// Closest points between segments a + s·ad and b + t·bd in x/z → [s, t] (0 to 1)
+function closestOnSegments(ax, az, adx, adz, bx, bz, bdx, bdz) {
+    const a = adx * adx + adz * adz
+    const e = bdx * bdx + bdz * bdz
+    const rx = ax - bx
+    const rz = az - bz
+    const f = bdx * rx + bdz * rz
+    if (a < 1e-6 && e < 1e-6) return [0, 0]
+    if (a < 1e-6) return [0, Math.min(1, Math.max(0, f / e))]
+    const c = adx * rx + adz * rz
+    if (e < 1e-6) return [Math.min(1, Math.max(0, -c / a)), 0]
+    const b = adx * bdx + adz * bdz
+    const denominator = a * e - b * b
+    let s = denominator > 1e-6 ? Math.min(1, Math.max(0, (b * f - c * e) / denominator)) : 0
+    let t = (b * s + f) / e
+    if (t < 0) {
+        t = 0
+        s = Math.min(1, Math.max(0, -c / a))
+    } else if (t > 1) {
+        t = 1
+        s = Math.min(1, Math.max(0, (b - c) / a))
+    }
+    return [s, t]
+}
 const lerp = (a, b, t) => a + (b - a) * t
 const lerpAngle = (from, to, t) => from + Math.atan2(Math.sin(to - from), Math.cos(to - from)) * t
 
@@ -57,8 +85,12 @@ function disposeTag(tag) {
 }
 
 // The other players in the room: their boat (one mesh per material, no deck
-// logic), their person on deck or on land, their name, and a kinematic
-// collider so boats bump into each other. Fed by Network.push().
+// logic, but their cabin lights), their person on deck or on land and their
+// name. Fed by Network.push().
+// Bumping boats: each player pushes only their own boat (collide(), every
+// physics step) using both masses and both speeds, so a boat that gets hit
+// moves on its owner's screen and nobody is launched. The remote boat also
+// has a sensor collider: someone on foot can't walk through it.
 export class RemotePlayers {
     constructor() {
         this.game = Game.getInstance()
@@ -77,7 +109,7 @@ export class RemotePlayers {
         const tag = createTag(name, color)
         tag.visible = false
         this.game.rendering.scene.add(tag)
-        this.players.set(slot, { slot, name, color, avatar, tag, mesh: null, boatId: null, body: null, half: null, snapshots: [], offset: null, teleport: true })
+        this.players.set(slot, { slot, name, color, avatar, tag, mesh: null, boatId: null, body: null, half: null, mass: 6, velocity: { x: 0, z: 0 }, lights: null, lightsOn: false, snapshots: [], offset: null, teleport: true })
     }
 
     setName(slot, name) {
@@ -128,6 +160,7 @@ export class RemotePlayers {
         player.snapshots.push({ time: state.t + player.offset, sent: state.t, p: state.p, q: state.q, c: state.c })
         if (player.snapshots.length > 30) player.snapshots.shift()
         if (state.b !== player.boatId) this.setBoat(player, state.b)
+        if (Boolean(state.l) !== player.lightsOn) this.setLights(player, Boolean(state.l))
         if (state.a && state.a.join('|') !== player.look) this.setLook(player, state.a)
     }
 
@@ -138,16 +171,21 @@ export class RemotePlayers {
         const definition = resolveBoat(content.boats, content.boats?.[id] ? id : Object.keys(content.boats ?? {})[0], 'jugador', () => {})
         this.removeBoat(player)
         const mesh = createBoatMesh(definition)
+        // Their cabin lights (those meshes are kept apart by the merge)
+        player.lights = mesh.userData.deck?.lights ?? null
         // Nobody walks or fishes on it here: one mesh per material is enough
         mergeByMaterial(mesh)
         rendering.scene.add(mesh)
         player.mesh = mesh
         player.half = boatHalfExtents(definition.size)
+        player.mass = definition.physics.mass
 
         const { RAPIER, world } = physics
         player.body = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased())
-        world.createCollider(RAPIER.ColliderDesc.cuboid(player.half.x, player.half.y, player.half.z).setFriction(0.3), player.body)
+        // Sensor: no contact forces (collide() does the bumping), but it blocks someone on foot
+        world.createCollider(RAPIER.ColliderDesc.cuboid(player.half.x, player.half.y, player.half.z).setSensor(true), player.body)
         player.teleport = true
+        this.setLights(player, player.lightsOn)
         // The person was on the old deck
         player.avatar.object.removeFromParent()
     }
@@ -163,6 +201,76 @@ export class RemotePlayers {
         old.removeFromParent()
         old.traverse((child) => child.geometry?.dispose())
         player.avatar = avatar
+    }
+
+    setLights(player, on) {
+        player.lightsOn = on
+        if (!player.lights) return
+        const { glowing, on: lit, off } = player.lights
+        for (const mesh of glowing) mesh.material = on ? lit : off
+    }
+
+    // Where the other boats are (to find an empty berth)
+    boatPositions() {
+        return [...this.players.values()].filter((player) => player.mesh).map((player) => player.mesh.position)
+    }
+
+    // Every physics step: my boat against each other boat, both as capsules
+    // (a segment along the hull, as wide as the beam). Only my boat gets an
+    // impulse, my share by mass; the other player's game moves theirs.
+    collide(boat) {
+        if (!this.players.size) return
+        const body = boat.body
+        const position = body.translation()
+        const velocity = body.linvel()
+        const rotation = body.rotation()
+        _mine.set(rotation.x, rotation.y, rotation.z, rotation.w)
+        _forward.set(0, 0, 1).applyQuaternion(_mine).setY(0).normalize()
+        const myRadius = boat.half.x
+        const myHalf = Math.max(0, boat.half.z - myRadius)
+        for (const player of this.players.values()) {
+            if (!player.mesh) continue
+            const other = player.mesh.position
+            // Far apart: nothing to do
+            if (Math.hypot(other.x - position.x, other.z - position.z) > boat.half.z + player.half.z + 2) continue
+            _theirs.set(0, 0, 1).applyQuaternion(player.mesh.quaternion).setY(0).normalize()
+            const radius = player.half.x
+            const half = Math.max(0, player.half.z - radius)
+            const ax = position.x - _forward.x * myHalf
+            const az = position.z - _forward.z * myHalf
+            const bx = other.x - _theirs.x * half
+            const bz = other.z - _theirs.z * half
+            const [s, t] = closestOnSegments(ax, az, _forward.x * myHalf * 2, _forward.z * myHalf * 2, bx, bz, _theirs.x * half * 2, _theirs.z * half * 2)
+            const px = ax + _forward.x * myHalf * 2 * s
+            const pz = az + _forward.z * myHalf * 2 * s
+            let nx = px - (bx + _theirs.x * half * 2 * t)
+            let nz = pz - (bz + _theirs.z * half * 2 * t)
+            const distance = Math.hypot(nx, nz)
+            const reach = myRadius + radius
+            if (distance >= reach) continue
+            if (distance > 1e-4) {
+                nx /= distance
+                nz /= distance
+            } else {
+                nx = 1
+                nz = 0
+            }
+            const penetration = reach - distance
+            // Closing speed along the normal (negative = coming together)
+            const closing = (velocity.x - player.velocity.x) * nx + (velocity.z - player.velocity.z) * nz
+            // Bounce a little, and separate gently while overlapping (never a launch)
+            const wanted = Math.max(closing < 0 ? -closing * 0.35 : 0, Math.min(2.5, penetration * 4))
+            const share = player.mass / (boat.mass + player.mass)
+            const change = Math.min(6, Math.max(0, wanted - closing) * share)
+            if (change <= 0) continue
+            // Halfway between the center and the contact: a bit of spin, not a spin-out
+            const impulse = change * boat.mass
+            body.applyImpulseAtPoint(
+                { x: nx * impulse, y: 0, z: nz * impulse },
+                { x: (position.x + px - nx * myRadius) / 2, y: position.y, z: (position.z + pz - nz * myRadius) / 2 },
+                true
+            )
+        }
     }
 
     update() {
@@ -189,6 +297,16 @@ export class RemotePlayers {
             _qa.fromArray(a.q).normalize()
             _qb.fromArray(b.q).normalize()
             mesh.quaternion.slerpQuaternions(_qa, _qb, alpha)
+            // Their speed (for bumping), from the two states around now
+            const span = (b.time - a.time) / 1000
+            if (span > 0.01 && !jump) {
+                const ease = Math.min(1, delta * 10)
+                player.velocity.x += ((b.p[0] - a.p[0]) / span - player.velocity.x) * ease
+                player.velocity.z += ((b.p[2] - a.p[2]) / span - player.velocity.z) * ease
+            } else {
+                player.velocity.x *= 0.9
+                player.velocity.z *= 0.9
+            }
 
             if (player.teleport || jump) {
                 player.body.setTranslation(mesh.position, true)

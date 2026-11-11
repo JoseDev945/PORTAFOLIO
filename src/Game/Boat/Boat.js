@@ -24,7 +24,8 @@ export class Boat {
     constructor() {
         this.game = Game.getInstance()
         this.spawn = new THREE.Vector3()
-        this.slot = 0
+        // Marina berth this boat starts at (multiplayer: the host gives a free one)
+        this.berth = 0
         this.parked = false
 
         const { RAPIER, world } = this.game.physics
@@ -54,6 +55,8 @@ export class Boat {
             // The controls drive the boat only while someone is at the helm
             const driving = this.game.playing && this.game.character?.driving !== false
             this.applyForces(dt, time, driving ? this.game.inputs : IDLE_CONTROLS)
+            // Bumping into the other players' boats (multiplayer)
+            this.game.remotePlayers?.collide(this)
         })
         this.game.ticker.on(() => this.update(this.game.ticker.gameDelta), TickOrder.BOAT)
         this.setDebug()
@@ -76,10 +79,10 @@ export class Boat {
     }
 
     // Everyone starts moored at the marina, each player at their own berth
-    // (slot 0 alone or hosting a room). Without a marina: world.spawn.
+    // (berth 0 alone). Without a marina: world.spawn.
     updateSpawn() {
         const { world } = this.game
-        const berth = world.berths[this.slot] ?? world.berths[0]
+        const berth = world.berths[this.berth] ?? world.berths[0]
         if (berth) {
             // The berth is the stern line: the boat sits ahead of it, bow out
             const distance = this.half.z + 0.3
@@ -92,11 +95,10 @@ export class Boat {
         this.spawnAngle = THREE.MathUtils.degToRad(spawn.angle)
     }
 
-    // Multiplayer slot (0–4): picks the berth. move = send the boat there now
-    // (joining a room: everyone meets at the marina)
-    setSlot(slot, { move = true } = {}) {
-        if (slot === this.slot) return
-        this.slot = slot
+    // Marina berth (0–4). move = send the boat there now (joining a room:
+    // everyone meets at the marina, each at an empty berth)
+    setBerth(berth, { move = true } = {}) {
+        this.berth = berth
         this.updateSpawn()
         if (!move) return
         this.respawn()

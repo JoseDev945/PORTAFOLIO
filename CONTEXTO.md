@@ -408,6 +408,17 @@ Principios clave:
       (`data/cosmetics.js`: paja, gorra, gorro, capitán, pirata, corona). Lo comprado se pone solo;
     - **los demás jugadores ven tu traje y sombrero** (campo `a` del estado de red).
 
+35. **Multijugador corregido** (10 de noviembre de 2026). Fallas que vio jugando con su amigo:
+    - **la sala ya no desaparece si el anfitrión se va**: el jugador con el slot más bajo toma el id de la sala y
+      los demás se reconectan solos conservando su slot (migración de anfitrión, hasta 60 s de reintentos);
+    - **día y noche iguales para todos**: el anfitrión manda su hora (`d`) y los demás la siguen;
+    - **al entrar vas a un amarre vacío** (el anfitrión revisa qué amarres no tienen bote);
+    - **choques entre botes con física**: ya no hay collider cinemático (era un muro inamovible y lanzaba lejos).
+      Cada juego empuja solo su propio bote, como cápsulas, con ambas masas y velocidades
+      (`RemotePlayers.collide`, cada paso de física). El bote remoto queda como sensor para no atravesarlo a pie;
+    - **las luces del bote se ven en los demás** (`l` en el estado; los plafones remotos cambian de material);
+    - **celular: botón 💡** junto a 🗺 y 🎥 en los botes con luces; L/💡 funcionan desde cualquier parte del bote.
+
 ### Errores visuales ya resueltos (por si reaparecen)
 
 - **Borda negra que parpadeaba** (ferry y Corvina): compartía caras con la pared blanca. Ahora va

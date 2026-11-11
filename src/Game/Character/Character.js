@@ -98,7 +98,8 @@ export class Character {
         // Respawn, map teleport, joining a room: back on board
         this.game.events.on('boat:place', () => this.board())
         this.game.inputs.on('character', () => this.game.playing && this.act())
-        this.game.inputs.on('lights', () => this.game.playing && this.canUseHelm() && this.setLights(!this.lightsOn))
+        // L (or 💡 on touch screens): from anywhere on board
+        this.game.inputs.on('lights', () => this.game.playing && this.toggleLights())
         this.game.ticker.on(() => this.update(), TickOrder.CHARACTER)
     }
 

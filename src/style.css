@@ -2154,3 +2154,16 @@ html.touch.has-deck .chat {
         padding-top: 0;
     }
 }
+
+/* 💡 lights next to 🗺 and 🎥 (boats with lights: the deck ones) */
+html.has-deck .touch-buttons {
+    grid-template-columns: auto auto auto auto;
+    grid-template-areas:
+        '. inventory chat emote'
+        'character map camera lights'
+        'respawn boost boost boost';
+}
+
+.touch-button[data-action='lights'] {
+    grid-area: lights;
+}

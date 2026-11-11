@@ -395,6 +395,15 @@ de la isla se movió al este con `zone: { angle, distance }` (campo nuevo de las
   local) o en tierra (mundo), con el color del jugador; el nombre flota encima.
 - **Enlace**: `?sala=CODIGO` se une a esa sala al zarpar. **Pausa → 👥 Multijugador** crea/une/copia.
 - Si el anfitrión se va, la sala se cierra (no hay migración de anfitrión).
+  **Ya no**: hay migración. Al irse el anfitrión (`host-left`) o callarse 10 s, el de slot más bajo crea un
+  Peer con el id de la sala (reintenta mientras el servidor lo libera) y los demás se reconectan enviando su
+  `slot` en `hi`. `hostSlot` ya no es siempre 0.
+- **Hora del día**: el estado del anfitrión lleva `d` (`dayCycle.params.time`); los demás la siguen
+  (`syncDay`). La bienvenida trae `day` y `berth` (amarre vacío, `Boat.setBerth`).
+- **Choques**: `RemotePlayers.collide(boat)` en cada paso de física: cápsula contra cápsula en x/z, impulso
+  solo al bote propio con la parte que le toca por masa, rebote 0,35 y separación suave (tope 6 m/s). El collider
+  remoto es sensor (bloquea a pie, sin fuerzas).
+- **Luces remotas**: `deck.lights` del bote remoto (sus mallas no se fusionan) cambia con `l`.
 
 ## Puerto pesquero y economía
 
