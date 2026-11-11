@@ -42,15 +42,21 @@ src/
    │  ├─ WorldEditor.js      Editor visual (#debug)
    │  ├─ materials.js        Paleta compartida
    │  ├─ Label.js, Zone.js, Lighting.js, Sky.js, Water.js, Waves.js, Zones.js
+   │  ├─ walkable.js         Superficies caminables a pie (islas, muelles, marina) y amarres
+   ├─ Network/
+   │  ├─ Network.js          Salas multijugador (PeerJS, se descarga solo al usarlo)
+   │  ├─ RemotePlayers.js    Bote, persona y nombre de los demás jugadores (interpolados)
+   │  ├─ Emotes.js           Emoji grande sobre el bote / la cabeza
+   │  └─ emoteList.js        Lista de emotes (el orden es parte del protocolo)
    ├─ Character/
-   │  ├─ Character.js        Persona a bordo: caminar, sentarse, tomar el timón
+   │  ├─ Character.js        La persona: a bordo (caminar, sentarse, timón) y en tierra
    │  └─ Avatar.js           Modelo articulado (cadera, rodillas, hombros) y sus poses
    ├─ Boat/
    │  ├─ Boat.js             Física y manejo del barco del jugador
    │  ├─ BoatMesh.js         Modelo 3D a partir de una definición de data/boats.js
    │  └─ Wake.js             Estela
-   ├─ UI/                    StartScreen, ProjectCard, PauseMenu, WorldMap
-   └─ utils/                 schema (validación), merge, random, pointer
+   ├─ UI/                    StartScreen, ProjectCard, PauseMenu, WorldMap, Chat, EmoteWheel, RoomPanel…
+   └─ utils/                 schema (validación), merge, random, pointer, players (colores y máximo)
 ```
 
 ## Principios
@@ -339,6 +345,100 @@ operarios del astillero. Tiene tres estados:
   (asientos y consola), asientos, timón (con `wheel` y `lever`, que giran con los controles) y el material
   del toldo, que se transparenta cuando la cámara necesita ver la cubierta.
 
+## A pie en tierra (estado `shore`)
+
+Con cualquier bote, al estar quieto (menos de 2,5 m/s) junto a un muelle o una playa, **F** baja a la
+persona (`Character.disembark`) y la cámara pasa a seguirla (`Character.rig()`, que `View` usa en vez del
+bote). **F** cerca del casco la vuelve a subir al timón; **R** y el viaje del mapa también (evento
+`boat:place`). Mientras nadie va a bordo el bote queda **amarrado** (`Boat.setParked`: frena su deriva y
+el motor se apaga en el audio).
+
+- **Dónde se puede pisar** (`World/walkable.js`): discos de cada isla (arena a y = 0,6 hasta 0,86 r,
+  pasto a y = 1,2 hasta 0,66 r) y cajas que declaran los props en su espacio local:
+  `walkable: [{ size: [halfX, halfZ], position: [x, y, z] }]` (el `dock` y la `marina` lo hacen). Las
+  piezas se solapan un poco donde se juntan para que no quede un hueco. `world.surfaceAt(x, z, margen)`
+  da la superficie más alta.
+- **Choques a pie**: una cápsula de Rapier (`intersectionsWithShape`) contra todos los colliders, menos
+  los marcados `ground: true` en su spec (suelo de las islas, muelles: `physics.groundColliders`) y el
+  propio bote. Palmeras, rocas, faroles, cajas y los botes de los demás bloquean el paso.
+- Dónde bajarse (`findLanding`): rayos desde ambos costados, la proa y la popa, hasta 3,2 m; gana el
+  punto libre más cercano a donde estás parado.
+- **F** hace "lo que hay a mano", en este orden: lo que apunta la mira (caña, timón), el anillo de
+  proyecto o de exhibición (antes era Enter; **E** sigue funcionando), bajarse, y lo de la cubierta.
+
+## Marina de inicio (prop `marina`) y amarres
+
+Muelle grande al sur de la isla `inicio`: pasarela, cabezal en T y dedos con un amarre entre cada par
+(5, uno por jugador, con su color pintado). El prop declara `berths: [{ position: [x, z], angle }]` (la
+línea de popa); `World.berths` los tiene en el mundo y `Boat.updateSpawn` pone el bote del slot del
+jugador con la popa allí y la proa hacia el mar. Sin marina se usa `world.spawn`. El anillo del proyecto
+de la isla se movió al este con `zone: { angle, distance }` (campo nuevo de las islas).
+
+## Multijugador (`Network/`)
+
+- **Salas de hasta 5** (`utils/players.js`). WebRTC navegador a navegador con **PeerJS** (servidor de
+  señalización y TURN gratuitos de peerjs.com; no hay servidor propio). PeerJS se carga con `import()` al
+  crear o unirse: no pesa en el arranque.
+- **Estrella**: quien crea la sala es el anfitrión (slot 0) y su id de PeerJS es `portafolio-bote-sala-`
+  + código de 5 letras. Los demás se conectan a ese id; el anfitrión les da un slot (1–4) y reenvía todo.
+  Al reenviar pone `from` (el slot real): nadie puede hablar por otro. Todo lo recibido se valida
+  (`validState`, nombres y textos limpios, números acotados) y el chat tiene límite de mensajes.
+- Mensajes: ver el comentario al inicio de `Network.js`. Estado 12 veces por segundo con `setInterval`
+  (sigue con la pestaña en segundo plano); 12 s sin noticias = se fue.
+- **Altura relativa a las olas**: cada jugador tiene su propio reloj de olas, así que se envía
+  `y − altura de la ola` y quien recibe lo suma a sus olas.
+- `mergeByMaterial` deja aparte las mallas con `renderOrder` o de solo profundidad: la tapa invisible de los
+  botes con cubierta debe dibujarse en su orden (fusionada, el bote remoto parpadeaba por dentro).
+- `RemotePlayers` dibuja cada estado 170 ms en el pasado, interpolando entre dos (el reloj del otro se
+  traduce al nuestro con el menor retraso visto). El bote remoto es `createBoatMesh` + `mergeByMaterial`
+  (pocas llamadas de dibujo) con un collider **cinemático** para chocar; su persona va en la cubierta (espacio
+  local) o en tierra (mundo), con el color del jugador; el nombre flota encima.
+- **Enlace**: `?sala=CODIGO` se une a esa sala al zarpar. **Pausa → 👥 Multijugador** crea/une/copia.
+- Si el anfitrión se va, la sala se cierra (no hay migración de anfitrión).
+
+## Puerto pesquero y economía
+
+- **Datos**: `data/fish.js` (cada especie con `price`) y `data/rods.js` (cañas con `style`, `price`, `luck`,
+  `speed`, `window`). `Fishing/catalog.js` da la rareza (por `chance`) y el valor de una captura
+  (`price × (0,6 + 0,8 × tamaño)`).
+- **`Fishing/Inventory.js`** (`game.inventory`, creado antes que `Fishing`): monedas, peces sin vender
+  `{ id, kg, length, size }`, cañas compradas y la que se usa. Guarda en `localStorage`
+  (`portafolio-inventario`) y dispara `inventory:change`. `Fishing` lee la caña (suerte, rapidez, reflejos)
+  y cambia el modelo de la mano; la tina muestra los últimos 14 peces sin vender.
+- **Formas de caña**: `createRod({ style, color })` en `Boat/FishingGear.js`.
+- **Puestos** (prop `stall`, `kind: 'rods' | 'fish'`): estructura fusionada + vendedor (`createAvatar` con
+  `mask: false`, `hat`, `apron`). Declaran `stations: [{ position, radius, payload }]`; a pie dentro del
+  radio, **F** dispara `station` y lo abre `RodShop` o `InventoryPanel` en modo venta. Los props pueden
+  declarar `footprint` para que la flora aleatoria no salga encima.
+- **Paneles** (`UI/Panel.js`): uno a la vez, `inputs.blocked` apaga las teclas del juego, liberan el mouse y
+  lo vuelven a bloquear al cerrar en primera persona. Esc, E, I, F o Tab cierran.
+- **Íconos** pixelados 16×16 (`UI/icons.js`) dibujados con los colores de los datos.
+- **Mira en la tina**: `buildFishingGear` agrega una caja invisible (`tub.aim`); `Fishing.aimedTub` y
+  `Character.aimedTarget` (`kind: 'tub'`) hacen que F abra el inventario.
+
+## Ropa y personaje
+
+- `data/cosmetics.js`: `skins` (suit, gloves, mask, apron) y `hats` (`style`: straw, cap, beanie, captain,
+  pirate, crown). `catalog.lookOptions(skin, hat)` da las opciones de `createAvatar` (que dibuja cada sombrero).
+- `Inventory` guarda `skins/skin/hats/hat`; `buyClothes` y `wear` (ponerse de nuevo lo mismo = quitarlo).
+- `Character.applyLook()` reemplaza el avatar en el mismo lugar al cambiar de ropa. En red va `a: [skin, hat]`
+  en cada estado y `RemotePlayers.setLook` rehace el avatar del otro.
+- Puesto `stall` `kind: 'style'` → `UI/StyleShop.js`. El inventario (E) muestra retrato (`icons.portrait`),
+  lo puesto y la fila de ropa.
+- **Pescar en PC**: clic derecho con el mouse bloqueado (`Fishing`, `mousedown`). La acción `fish` es fija y
+  sin teclas (la usa el botón 🎣). Los avisos pueden llevar `key` para mostrar "Clic" en vez de una tecla.
+
+## Chat y emotes
+
+- **Enter** (acción fija `chat`, como Esc) abre el chat abajo a la derecha (`UI/Chat.js`): Enter envía,
+  Esc cancela. Las líneas se desvanecen a los 10 s; abierto se ve todo el historial. Sube solo cuando hay
+  una tarjeta de proyecto en esa esquina. Mientras se escribe, `Inputs` ignora las teclas (`isTyping`).
+  Las partidas guardadas que tenían Enter en otra acción lo pierden al cargar (`RESERVED_KEYS`).
+- **T** (acción `emote`) abre una rueda de 8 emojis (`UI/EmoteWheel.js`): clic o 1–8. El emoji sale
+  grande sobre el bote, o sobre la cabeza en tierra (`Network/Emotes.js`): un sprite por jugador que se
+  reutiliza redibujando su canvas, así nunca se compila un material nuevo.
+- En celular: botones 💬 y 😀.
+
 ## Bote de pesca (`layout: 'fishing'`)
 
 La Corvina 250 se dibuja en código, en metros reales, sobre el casco abierto del ferry
@@ -385,7 +485,8 @@ Estilo Minecraft, en primera persona, en botes cuyo modelo trae porta cañas y t
 | 0 | Quality | Mide los fps reales y ajusta la resolución |
 | 10 | Physics | Pasos fijos de Rapier; el bote aplica fuerzas en `onStep` |
 | 20 | Boat | Sincroniza el modelo con el cuerpo físico |
-| 25 | Character | Persona a bordo, timón y acelerador animados, ojos de la primera persona |
+| 21 | RemotePlayers | Botes, personas y nombres de los demás jugadores (interpolados) |
+| 25 | Character | Persona a bordo o en tierra, timón y acelerador animados, ojos de la primera persona |
 | 30 | Wake | Estela |
 | 40 | Zones | Calcula la zona activa → `zone:change` |
 | 50 | View | Cámara |
@@ -406,7 +507,16 @@ Estilo Minecraft, en primera persona, en botes cuyo modelo trae porta cañas y t
 | `boat:change` | — | Boat (al cambiar de modelo) | Character |
 | `character:prompt` | texto o `null` | Character | CharacterPrompt |
 | `zone:change` | `active, previous` (payload de la zona) | Zones | ProjectCard, BoatCard, Audio |
-| `interact` | `zone` activa | Game (tecla Enter) | ProjectCard (abre el enlace), BoatCard (cambia de bote) |
+| `interact` | `zone` activa | Character (F al timón), Game (E) | ProjectCard (abre el enlace), BoatCard (cambia de bote) |
+| `boat:place` | — | Boat (reaparecer, viaje del mapa, unirse a sala) | Character (vuelve a bordo) |
+| `character:shore` | `true` / `false` | Character (bajarse / subir) | — |
+| `net:status` | `offline` / `connecting` / `hosting` / `joined` | Network | RoomPanel |
+| `net:players` | lista de jugadores | Network | RoomPanel |
+| `net:error` | texto | Network | RoomPanel |
+| `chat:message` | `{ slot, name, text, system }` | Network | Chat |
+| `emote` | `{ slot, index, me }` | Network | Emotes |
+| `inventory:change` | inventario | Inventory | Fishing, InventoryPanel, RodShop, CoinsHud |
+| `station` | `{ shop, label }` | Character (F en un mostrador) | RodShop, InventoryPanel |
 | `settings:change` | `key, value` | Settings | View, Audio, Boat, BoatCard |
 | `quality:change` | — | Quality | Rendering |
 | `ui:click` | — | WorldMap | Audio |
@@ -433,3 +543,4 @@ Estilo Minecraft, en primera persona, en botes cuyo modelo trae porta cañas y t
 | `?webgl` | Fuerza WebGL2 |
 | `?post=off` | Sin post-procesado |
 | `?hora=noche` | Empieza a esa hora: `noche`, `amanecer`, `dia` o `atardecer` |
+| `?sala=K7M2Q` | Se une a esa sala multijugador al zarpar (es el enlace que copia el anfitrión) |

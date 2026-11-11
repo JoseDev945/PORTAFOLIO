@@ -14,6 +14,8 @@ const _euler = new THREE.Euler()
 //   { shape: 'ball', radius, position: [x, y, z] }
 //   { shape: 'cuboid', size: [halfX, halfY, halfZ], position, angle (deg) }
 //   { shape: 'cylinder', radius, halfHeight, position }
+// ground: true marks a floor for someone on foot (island ground, docks): the
+// character stands on it instead of bumping into it.
 //
 // Three kinds of bodies:
 //   fixed      addCollider(spec, parent): never moves (rocks, docks, sheds…)
@@ -34,6 +36,14 @@ export class Build {
         this.dynamics = []
         // Interactive areas: { x, z, radius, payload, update(time, inside) }
         this.zones = []
+        // Surfaces the character can walk on, in world space (see World/walkable.js)
+        this.walkables = []
+        // Mooring spots for the players' boats (the start marina): { x, z, angle } of the stern
+        this.berths = []
+        // Shop counters on land: { x, z, radius, payload }
+        this.stations = []
+        // Colliders that are a floor for someone on foot (island ground, docks)
+        this.groundColliders = []
     }
 
     add(object) {
@@ -43,6 +53,10 @@ export class Build {
 
     addZone(zone) {
         this.zones.push(zone)
+    }
+
+    addWalkable(surface) {
+        this.walkables.push(surface)
     }
 
     onUpdate(callback) {
@@ -124,7 +138,11 @@ export class Build {
                 .setTranslation(position.x, position.y, position.z)
                 .setRotation({ x: 0, y: Math.sin(yaw / 2), z: 0, w: Math.cos(yaw / 2) })
         )
-        world.createCollider(this.createColliderDesc(spec, _scale).setFriction(0.2), body)
+        const collider = world.createCollider(this.createColliderDesc(spec, _scale).setFriction(0.2), body)
+        if (spec.ground) {
+            this.physics.groundColliders.add(collider.handle)
+            this.groundColliders.push(collider.handle)
+        }
         this.bodies.push(body)
     }
 
@@ -198,7 +216,12 @@ export class Build {
                 }
             })
         }
+        for (const handle of this.groundColliders) this.physics.groundColliders.delete(handle)
         for (const body of this.bodies) this.physics.world.removeRigidBody(body)
+        this.groundColliders = []
+        this.walkables = []
+        this.berths = []
+        this.stations = []
         this.objects = []
         this.bodies = []
         this.updaters = []

@@ -2,9 +2,10 @@ import * as THREE from 'three/webgpu'
 import { mergeByMaterial } from '../utils/merge.js'
 import { random } from '../utils/random.js'
 import { materials, shadow } from './materials.js'
-import { createProp } from './props/index.js'
+import { createProp, props as propTypes } from './props/index.js'
 import { createLabel } from './Label.js'
 import { createZone, placePropZones, addMarkerCollider } from './Zone.js'
+import { discSurface, placePropSurfaces } from './walkable.js'
 
 // Validation rules for an island in data/world.js
 export const ISLAND_SCHEMA = {
@@ -31,10 +32,24 @@ export const ISLAND_SCHEMA = {
             length: { type: 'number', default: 7, min: 2, max: 40 }
         }
     },
+    // Where the project ring goes (null = past the end of the dock)
+    zone: {
+        type: 'object',
+        nullable: true,
+        default: null,
+        schema: {
+            angle: { type: 'number', default: 0 },
+            // From the island center
+            distance: { type: 'number', default: 15, min: 0, max: 80 }
+        }
+    },
     props: { type: 'array', default: [] }
 }
 
 const GRASS_Y = 1
+// Floor heights for someone on foot: top of the grass cap and of the sand base
+const GRASS_TOP = 1.2
+const SAND_TOP = 0.6
 
 function jitter(geometry, seed, amount) {
     // Radial offset derived from the vertex position (not from a sequence) so
@@ -86,14 +101,22 @@ export function buildIsland(island, project, path, { build, content, warn, error
     const grass = shadow(new THREE.Mesh(jitter(new THREE.CylinderGeometry(radius * 0.68, radius * 0.78, 0.8, 10, 1), island.seed + 1, 0.16), materials[island.ground]))
     grass.position.y = 0.8
     group.add(sand, grass)
-    colliders.push([{ shape: 'cylinder', radius: radius * 1.02, halfHeight: 2.6, position: [0, -1.4, 0] }, group])
+    colliders.push([{ shape: 'cylinder', radius: radius * 1.02, halfHeight: 2.6, position: [0, -1.4, 0], ground: true }, group])
+    // On foot: the beach ring and the grass on top (a bit inside their jagged edges)
+    build.addWalkable(discSurface(island.x, island.z, radius * 0.86, SAND_TOP))
+    build.addWalkable(discSurface(island.x, island.z, radius * 0.66, GRASS_TOP))
 
     // Dock direction: explicit angle, or facing the start island
     const atOrigin = Math.hypot(island.x, island.z) < 0.01
     const autoAngle = atOrigin ? Math.PI / 2 : Math.atan2(-island.z, -island.x)
     const dockAngle = island.dock?.angle != null ? THREE.MathUtils.degToRad(island.dock.angle) : autoAngle
     const dockLength = island.dock ? island.dock.length : 0
-    const keepClear = (angle, margin) => island.dock && angularDistance(angle, dockAngle) < margin
+    // No random rocks where a dock or the marina meets the island
+    const clearAngles = island.props
+        .filter((entry) => (entry?.type === 'marina' || entry?.type === 'dock') && Math.hypot(Number(entry.x) || 0, Number(entry.z) || 0) > 0.5)
+        .map((entry) => Math.atan2(Number(entry.z) || 0, Number(entry.x) || 0))
+    if (island.dock) clearAngles.push(dockAngle)
+    const keepClear = (angle, margin) => clearAngles.some((clear) => angularDistance(angle, clear) < margin)
     const seed = () => Math.floor(rand() * 1e6)
 
     // Random decoration (the seed makes it the same on every visit)
@@ -117,7 +140,8 @@ export function buildIsland(island, project, path, { build, content, warn, error
 
     // Glowing plants, away from the hand placed objects
     const flora = island.flora ?? (island.ground === 'concrete' ? 0 : Math.round(radius * 1.5))
-    const taken = island.props.map((entry) => [Number(entry?.x) || 0, Number(entry?.z) || 0])
+    // Big props (stalls) declare a footprint: no plants inside it
+    const taken = island.props.map((entry) => [Number(entry?.x) || 0, Number(entry?.z) || 0, propTypes.get(entry?.type)?.footprint ?? 2])
     for (let i = 0; i < flora; i++) {
         const angle = rand() * Math.PI * 2
         const distance = radius * (0.12 + Math.sqrt(rand()) * 0.46)
@@ -125,7 +149,7 @@ export function buildIsland(island, project, path, { build, content, warn, error
         const z = Math.sin(angle) * distance
         const plantSeed = seed()
         const size = 0.7 + rand() * 0.6
-        if (taken.some(([px, pz]) => Math.hypot(px - x, pz - z) < 2)) continue
+        if (taken.some(([px, pz, clear]) => Math.hypot(px - x, pz - z) < clear)) continue
         addProp({ type: 'alien-plant', x, z, size, angle: rand() * 360, seed: plantSeed }, `${path}.flora`, GRASS_Y)
     }
 
@@ -150,6 +174,7 @@ export function buildIsland(island, project, path, { build, content, warn, error
     build.add(group)
     for (const [spec, parent] of colliders) build.addCollider(spec, parent)
     for (const prop of placed) placePropZones(build, prop)
+    for (const prop of placed) placePropSurfaces(build, prop)
     for (const prop of placed) if (prop.body) build.addDynamic(prop)
     build.onUpdate((time) => updaters.forEach((update) => update(time)))
 
@@ -163,8 +188,9 @@ export function buildIsland(island, project, path, { build, content, warn, error
         build.onUpdate((time) => (label.position.y = 10 + Math.sin(time * 1.5 + island.seed) * 0.3))
 
         const marker = createZone(accent)
-        const distance = island.dock ? radius * 0.75 + dockLength + 5.5 : radius + 5.5
-        marker.object.position.set(island.x + Math.cos(dockAngle) * distance, 0, island.z + Math.sin(dockAngle) * distance)
+        const distance = island.zone?.distance ?? (island.dock ? radius * 0.75 + dockLength + 5.5 : radius + 5.5)
+        const zoneAngle = island.zone ? THREE.MathUtils.degToRad(island.zone.angle) : dockAngle
+        marker.object.position.set(island.x + Math.cos(zoneAngle) * distance, 0, island.z + Math.sin(zoneAngle) * distance)
         build.add(marker.object)
         addMarkerCollider(build, marker)
         zone = { x: marker.object.position.x, z: marker.object.position.z, radius: marker.radius }

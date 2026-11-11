@@ -5,7 +5,7 @@ import { waveHeight } from '../World/Waves.js'
 import { shoreDistanceAt } from '../World/Water.js'
 import { colorMaterial, mistMaterial } from '../World/materials.js'
 import { createRod, createCatchMesh } from '../Boat/FishingGear.js'
-import { fish as SPECIES } from '../../data/fish.js'
+import { SPECIES, speciesById, fishValue, formatCoins } from './catalog.js'
 import { isTouch } from '../Inputs.js'
 import { keyLabel } from '../utils/keys.js'
 
@@ -19,7 +19,6 @@ const BITE_WINDOW = 0.95
 // Faster than this (m/s) the bobber can't be cast and an out line snaps
 const MAX_SPEED = { cast: 2.5, line: 3.2 }
 const TUB_VISIBLE = 14
-const STORAGE_KEY = 'portafolio-pesca'
 // Where the rod is held, in camera space (the camera looks along -z)
 const HAND = { x: 0.34, y: -0.4, z: -0.5, pitch: -1.2, roll: 0.18, scale: 0.8 }
 const BUBBLES = 28
@@ -50,7 +49,7 @@ function createBobber() {
 }
 
 // Fishing like in Minecraft, from the first person view of a boat with rod
-// holders (the Corvina 250). The fish action (G / right click / 🎣):
+// holders (the Corvina 250). The fish action (right click on PC / 🎣):
 //   1. takes a rod from its holder and casts the bobber
 //   2. you wait; bubbles move along the surface toward the bobber
 //   3. the bobber is pulled under with a splash: reel in right then to catch it
@@ -69,7 +68,7 @@ export class Fishing {
         this.anchor = new THREE.Vector2()
         this.flights = []
         this.aimed = null
-        this.load()
+        this.aimedTub = false
 
         // The rod in your hand, glued to the camera every frame
         this.hand = new THREE.Group()
@@ -78,8 +77,8 @@ export class Fishing {
         this.pivot.position.set(HAND.x, HAND.y, HAND.z)
         this.pivot.scale.setScalar(HAND.scale)
         this.hand.add(this.pivot)
-        this.rod = createRod('#f2c14e')
-        this.pivot.add(this.rod)
+        this.rodId = null
+        this.setRodModel()
         scene.add(this.hand)
 
         this.bobber = createBobber()
@@ -106,43 +105,38 @@ export class Fishing {
         this.bubbleClock = 0
 
         const { events, inputs, canvas } = this.game
-        inputs.on('fish', () => this.game.playing && this.use())
-        // Right click: in first person it fishes while you hold a rod or aim at
-        // one, otherwise it switches the boat lights. In the other cameras it fishes.
+        // Only on board: on land the rods stay in their holders
+        inputs.on('fish', () => this.game.playing && !this.game.character.ashore && this.use())
+        // PC: right click casts and reels in (first person, mouse locked, with a
+        // rod in hand or aiming at one). The right button does nothing.
         canvas.addEventListener('mousedown', (event) => {
-            if (event.button !== 2 || !this.game.playing) return
-            const fishing = this.gear && (this.equipped || this.aimed)
-            if (this.game.view.mode === 'first' && !fishing) this.game.character.toggleLights()
-            else if (this.gear) this.use()
+            if (event.button !== 2 || !this.game.view.locked || !this.game.playing || this.game.character.ashore) return
+            if (this.gear && (this.equipped || this.aimed)) this.use()
         })
         canvas.addEventListener('contextmenu', (event) => event.preventDefault())
         events.on('boat:change', () => this.attach())
+        // Sold or caught fish, a new rod
+        events.on('inventory:change', () => {
+            this.setRodModel()
+            this.fillTub()
+            this.emitTub()
+        })
         events.on('camera:change', (mode) => mode !== 'first' && this.stow())
         this.game.ticker.on(() => this.update(), TickOrder.VIEW + 5)
         this.attach()
     }
 
-    load() {
-        this.tub = { count: 0, log: [], best: null }
-        try {
-            const saved = JSON.parse(localStorage.getItem(STORAGE_KEY))
-            if (saved && Number.isFinite(saved.count) && Array.isArray(saved.log)) {
-                this.tub.count = saved.count
-                // Only entries of species that still exist
-                this.tub.log = saved.log.filter((entry) => SPECIES.some((species) => species.id === entry?.id) && Number.isFinite(entry.kg) && Number.isFinite(entry.length))
-                if (saved.best && SPECIES.some((species) => species.id === saved.best.id)) this.tub.best = saved.best
-            }
-        } catch {
-            // Nothing saved or storage blocked: an empty tub
+    // The rod in your hand is the one you bought and picked (data/rods.js)
+    setRodModel() {
+        const rod = this.game.inventory.rodData
+        if (rod.id === this.rodId) return
+        this.rodId = rod.id
+        if (this.rod) {
+            this.rod.removeFromParent()
+            this.rod.traverse((child) => child.geometry?.dispose())
         }
-    }
-
-    save() {
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(this.tub))
-        } catch {
-            // The catch still counts for this visit
-        }
+        this.rod = createRod({ style: rod.style, color: rod.color })
+        this.pivot.add(this.rod)
     }
 
     // The boat changed (or was rebuilt): find its rods and tub
@@ -176,7 +170,7 @@ export class Fishing {
         if (view.mode !== 'first') {
             // Fishing is done in first person: aim at a rod with the crosshair
             this.game.settings.set('camera', 'first')
-            this.toast(isTouch() ? 'Apunta a una caña del porta cañas y toca «Tomar caña» arriba' : `Apunta a una caña del porta cañas y pulsa ${keyLabel(this.game.inputs.keysFor('fish')[0])}`)
+            this.toast(isTouch() ? 'Apunta a una caña del porta cañas y toca «Tomar caña» arriba' : 'Apunta a una caña del porta cañas y haz clic derecho')
             return
         }
         if (!this.equipped) {
@@ -289,15 +283,21 @@ export class Fishing {
     // What the crosshair points at: a rod (or the holder of the rod in hand) within reach
     updateAim() {
         let aimed = null
-        if (this.gear && this.game.playing && this.game.view.mode === 'first') {
+        let aimedTub = false
+        if (this.gear && this.game.playing && this.game.view.mode === 'first' && !this.game.character.ashore) {
             _raycaster.setFromCamera(_center, this.game.view.camera)
             const slots = this.gear.slots.filter((slot) => (this.equipped ? slot.rod === this.holderRod : slot.rod.visible))
-            const hit = _raycaster.intersectObjects(slots.map((slot) => slot.aim), false)[0]
-            aimed = hit ? slots.find((slot) => slot.aim === hit.object) : null
+            const targets = slots.map((slot) => slot.aim)
+            // The tub too, while no line is out (F opens your catch)
+            if (this.state === 'idle') targets.push(this.gear.tub.aim)
+            const hit = _raycaster.intersectObjects(targets, false)[0]
+            aimed = hit ? (slots.find((slot) => slot.aim === hit.object) ?? null) : null
+            aimedTub = hit?.object === this.gear.tub.aim
         }
-        if (aimed !== this.aimed) {
+        if (aimed !== this.aimed || aimedTub !== this.aimedTub) {
             this.aimed = aimed
-            this.game.events.trigger('fishing:aim', Boolean(aimed))
+            this.aimedTub = aimedTub
+            this.game.events.trigger('fishing:aim', Boolean(aimed) || aimedTub)
         }
     }
 
@@ -350,7 +350,7 @@ export class Fishing {
         this.anchor.set(bobber.x, bobber.z)
         this.state = 'waiting'
         // Fish gather near the reefs: they bite sooner there
-        this.timer = randomIn(WAIT) * (shore < 12 ? 0.7 : 1)
+        this.timer = randomIn(WAIT) * (shore < 12 ? 0.7 : 1) * this.game.inventory.rodData.speed
         this.game.spray?.splash(bobber.x, water, bobber.z, 6, 0.35)
         this.sound('plop')
     }
@@ -381,7 +381,7 @@ export class Fishing {
             }
             if (left === 0) {
                 this.state = 'bite'
-                this.timer = BITE_WINDOW
+                this.timer = BITE_WINDOW * this.game.inventory.rodData.window
                 this.game.spray?.splash(this.anchor.x, water, this.anchor.y, 10, 0.5)
                 this.sound('bite')
             }
@@ -445,10 +445,15 @@ export class Fishing {
     // Picks what was caught: rarer things are rarer, the place matters
     pickSpecies(x, z) {
         const shore = shoreDistanceAt(x, z, this.game.world.islands)
+        const luck = this.game.inventory.rodData.luck
         const weights = SPECIES.map((species) => {
             let weight = species.chance
             if (species.habitat === 'reef') weight *= shore < 14 ? 2 : 0.4
             if (species.habitat === 'open') weight *= shore > 25 ? 2.2 : 0.5
+            // Better rods: the rare ones show up more, the junk less
+            if (species.junk) weight *= 1 - luck * 0.6
+            else if (species.chance < 3) weight *= 1 + luck * 3
+            else if (species.chance < 10) weight *= 1 + luck * 1.2
             return weight
         })
         let roll = Math.random() * weights.reduce((a, b) => a + b, 0)
@@ -461,14 +466,15 @@ export class Fishing {
 
     catchFish() {
         const species = this.pickSpecies(this.anchor.x, this.anchor.y)
-        const size = species.junk ? 0 : Math.random()
+        // Luck also makes them bigger
+        const size = species.junk ? 0 : 1 - Math.pow(1 - Math.random(), 1 + this.game.inventory.rodData.luck)
         const length = species.junk ? 0.3 : THREE.MathUtils.lerp(species.length[0], species.length[1], size)
         const kg = species.junk ? 0 : Math.round(THREE.MathUtils.lerp(species.kg[0], species.kg[1], size * size) * 10) / 10
         const mesh = createCatchMesh(species, length)
         mesh.position.copy(this.bobber.position)
         this.game.rendering.scene.add(mesh)
         this.game.spray?.splash(this.bobber.position.x, this.bobber.position.y, this.bobber.position.z, 14, 0.7)
-        this.flights.push({ mesh, from: this.bobber.position.clone(), t: 0, duration: 0.9, species, length, kg })
+        this.flights.push({ mesh, from: this.bobber.position.clone(), t: 0, duration: 0.9, species, length, kg, size })
     }
 
     // Catches fly in an arc from the water into the tub
@@ -489,22 +495,15 @@ export class Fishing {
         }
     }
 
-    land({ species, length, kg }) {
+    land({ species, length, kg, size }) {
         if (species.junk) {
             this.toast(species.junk === 'bottle' ? `🍾 ${species.name}: “sigue navegando, hay más islas”` : `🥾 Sacaste una ${species.name.toLowerCase()}… la devuelves al mar`)
             this.sound('junk')
             return
         }
-        const tub = this.tub
-        tub.count++
-        tub.log.push({ id: species.id, kg, length: Math.round(length * 100) / 100 })
-        if (tub.log.length > TUB_VISIBLE) tub.log.shift()
-        const record = !tub.best || kg > tub.best.kg
-        if (record) tub.best = { id: species.id, kg }
-        this.save()
-        this.fillTub()
-        this.emitTub()
-        this.toast(`🎣 ¡${species.name} de ${kg.toLocaleString('es')} kg!${record && tub.count > 1 ? ' Nuevo récord' : ''}`)
+        const inventory = this.game.inventory
+        const record = inventory.add(species, { kg, length, size })
+        this.toast(`🎣 ¡${species.name} de ${kg.toLocaleString('es')} kg! · ${formatCoins(fishValue(species, size))}${record && inventory.stats.caught > 1 ? ' · Nuevo récord' : ''}`)
         this.sound('catch')
     }
 
@@ -514,11 +513,14 @@ export class Fishing {
         const { contents, half } = this.gear.tub
         contents.traverse((child) => child.geometry?.dispose())
         contents.clear()
-        this.tub.log.forEach((entry, index) => {
-            const species = SPECIES.find((item) => item.id === entry.id)
+        // The last catches not sold yet
+        const fish = this.game.inventory.fish
+        const shown = fish.slice(-TUB_VISIBLE)
+        shown.forEach((entry, index) => {
+            const species = speciesById(entry.id)
             const length = Math.min(entry.length, half.x * 1.7)
             const mesh = createCatchMesh(species, length)
-            const n = this.tub.count - this.tub.log.length + index
+            const n = fish.length - shown.length + index
             mesh.position.set((hash(n) - 0.5) * half.x * 0.6, index * 0.02, (hash(n + 7) - 0.5) * half.z * 0.8)
             // Lying on its side, across the tub
             mesh.rotation.set(0, Math.PI / 2 + (hash(n + 3) - 0.5) * 0.8, Math.PI / 2)
@@ -527,8 +529,9 @@ export class Fishing {
     }
 
     emitTub() {
-        const best = this.tub.best ? { name: SPECIES.find((species) => species.id === this.tub.best.id)?.name, kg: this.tub.best.kg } : null
-        this.game.events.trigger('fishing:tub', this.gear ? { count: this.tub.count, best } : null)
+        const { fish, stats } = this.game.inventory
+        const best = stats.best ? { name: speciesById(stats.best.id)?.name, kg: stats.best.kg } : null
+        this.game.events.trigger('fishing:tub', this.gear ? { count: fish.length, best } : null)
     }
 
     toast(text) {
@@ -556,7 +559,7 @@ export class Fishing {
             // Desktop: the aimed rod gets its label next to it (F takes it, UI/AimLabel.js)
             if (first && !isTouch() && this.aimed && this.state === 'idle') label = null
         }
-        const prompt = label ? [{ action: 'fish', label }] : null
+        const prompt = label ? [{ action: 'fish', label, key: 'Clic der.' }] : null
         const key = label ?? ''
         if (key === this.promptKey) return
         this.promptKey = key

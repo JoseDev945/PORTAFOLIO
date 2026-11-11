@@ -271,6 +271,10 @@ export class Audio {
             this.playPluck(midiToFrequency(76), now + 0.09, this.effectsBus, 0.12)
             this.playPluck(midiToFrequency(79), now + 0.18, this.effectsBus, 0.12)
         } else if (name === 'junk') this.playPluck(midiToFrequency(55), now, this.effectsBus, 0.1)
+        // Coins at the port (selling fish, buying a rod): a bright little jingle
+        else if (name === 'coins') {
+            for (let i = 0; i < 4; i++) this.playPluck(midiToFrequency(84 + (i % 2) * 7), now + i * 0.06, this.effectsBus, 0.08)
+        }
         // Deep rumble when the sea serpent passes
         else if (name === 'rumble') this.playNoise(now, 4, 90, 50, 0.6)
     }
@@ -315,7 +319,8 @@ export class Audio {
         const throttle = Math.abs(boat.state.throttle)
         this.engine.oscillator.frequency.setTargetAtTime(48 + speed * 3 + throttle * 10, now, 0.15)
         this.engine.filter.frequency.setTargetAtTime(180 + throttle * 250 + speed * 10, now, 0.15)
-        this.engine.output.gain.setTargetAtTime(0.04 + throttle * 0.12, now, 0.15)
+        // Moored with nobody aboard: the engine is off
+        this.engine.output.gain.setTargetAtTime(boat.parked ? 0 : 0.04 + throttle * 0.12, now, boat.parked ? 0.4 : 0.15)
         this.engine.noiseGain.gain.setTargetAtTime(Math.min(speed / 20, 1) * 0.3 * boat.state.submerged, now, 0.1)
     }
 }

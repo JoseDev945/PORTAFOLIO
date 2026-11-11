@@ -22,6 +22,8 @@ export class Physics {
         // used to draw moving bodies smoothly at any frame rate
         this.alpha = 1
         this.stepCallbacks = []
+        // Handles of colliders that are floors for the character (Build, ground: true)
+        this.groundColliders = new Set()
 
         this.game.ticker.on(() => this.update(), TickOrder.PHYSICS)
         this.setWireframe()

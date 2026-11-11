@@ -31,7 +31,7 @@ export class CharacterPrompt {
         this.element.classList.toggle('visible', visible)
         if (!this.prompt) return
         const parts = []
-        this.prompt.forEach(({ action, label }, i) => {
+        this.prompt.forEach(({ action, label, key }, i) => {
             if (i > 0) parts.push(' · ')
             const item = document.createElement('button')
             item.className = 'prompt-item'
@@ -42,7 +42,8 @@ export class CharacterPrompt {
             })
             const kbd = document.createElement('kbd')
             kbd.className = 'desktop-only'
-            kbd.textContent = keyLabel(this.game.inputs.keysFor(action)[0])
+            // key: a fixed name instead of the bound key ('Clic' for fishing)
+            kbd.textContent = key ?? keyLabel(this.game.inputs.keysFor(action)[0])
             const icon = document.createElement('span')
             icon.className = 'touch-only'
             icon.textContent = ICONS[action] ?? ''

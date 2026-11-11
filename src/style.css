@@ -1413,3 +1413,744 @@ html.has-rod .touch-button[data-hold='boost'] {
 .aim-label.visible {
     opacity: 1;
 }
+
+/* ── Multiplayer ─────────────────────────────────────────────────────── */
+
+/* Room badge under the title: "👥 Sala K7M2Q · 3/5" */
+.room-badge {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: rgba(8, 30, 60, 0.6);
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+/* Chat, bottom right like League of Legends. Closed: recent lines only, they
+   fade after a few seconds. Open (Enter): the whole history and the box. */
+.chat {
+    --card-lift: 0px;
+    position: fixed;
+    right: 16px;
+    bottom: calc(16px + var(--card-lift));
+    width: min(380px, calc(100vw - 32px));
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    pointer-events: none;
+    transition: bottom 0.4s cubic-bezier(0.2, 0.9, 0.3, 1);
+    z-index: 5;
+}
+
+.chat-log {
+    max-height: 30vh;
+    overflow-y: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 8px;
+    border-radius: 12px;
+    font-size: 0.88rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    scrollbar-width: thin;
+}
+
+.chat-line {
+    align-self: flex-start;
+    max-width: 100%;
+    padding: 2px 8px;
+    border-radius: 8px;
+    background: rgba(8, 30, 60, 0.55);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    transition: opacity 0.8s;
+}
+
+.chat-line.old {
+    opacity: 0;
+}
+
+.chat-line.system {
+    color: #ffe08a;
+    font-style: italic;
+}
+
+.chat-name {
+    font-weight: 800;
+}
+
+.chat-box {
+    display: none;
+    gap: 6px;
+}
+
+.chat.open {
+    pointer-events: auto;
+}
+
+.chat.open .chat-log {
+    overflow-y: auto;
+    background: rgba(8, 30, 60, 0.55);
+    backdrop-filter: blur(6px);
+}
+
+.chat.open .chat-line {
+    opacity: 1;
+    background: none;
+}
+
+.chat.open .chat-box {
+    display: flex;
+}
+
+.chat-input {
+    flex: 1;
+    min-width: 0;
+    padding: 9px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 999px;
+    background: rgba(8, 30, 60, 0.85);
+    color: #fff;
+    font: inherit;
+    font-size: 0.92rem;
+    outline: none;
+}
+
+.chat-input:focus {
+    border-color: #ffb347;
+}
+
+.chat-send {
+    display: none;
+    width: 40px;
+    border: none;
+    border-radius: 50%;
+    background: #ffb347;
+    color: #3a1d00;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+/* Touch: above the buttons, and a ➤ to send */
+html.touch .chat {
+    right: calc(16px + env(safe-area-inset-right));
+    bottom: calc(250px + env(safe-area-inset-bottom));
+    width: min(320px, calc(100vw - 32px));
+}
+
+html.touch .chat.open {
+    bottom: calc(50vh - 40px);
+}
+
+html.touch .chat-log {
+    max-height: 22vh;
+    font-size: 0.8rem;
+}
+
+html.touch .chat-send {
+    display: block;
+}
+
+html.intro .chat,
+html.intro .hud .room-badge {
+    opacity: 0;
+}
+
+/* Emote wheel (T): a ring of emojis in the middle of the screen */
+.emote-wheel {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s;
+    z-index: 7;
+}
+
+.emote-wheel.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.emote-center {
+    grid-area: 1 / 1;
+    width: 92px;
+    height: 92px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(8, 30, 60, 0.75);
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.emote-option {
+    --radius: 118px;
+    grid-area: 1 / 1;
+    position: relative;
+    width: 66px;
+    height: 66px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    background: rgba(8, 30, 60, 0.82);
+    font-size: 2rem;
+    cursor: pointer;
+    transform: rotate(var(--angle)) translateX(var(--radius)) rotate(calc(-1 * var(--angle))) scale(0.6);
+    transition: transform 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.3), background 0.1s;
+}
+
+.emote-wheel.visible .emote-option {
+    transform: rotate(var(--angle)) translateX(var(--radius)) rotate(calc(-1 * var(--angle)));
+}
+
+.emote-option:hover,
+.emote-option:focus-visible {
+    background: rgba(255, 179, 71, 0.9);
+    outline: none;
+}
+
+.emote-option kbd {
+    position: absolute;
+    right: -6px;
+    bottom: -6px;
+    font-size: 0.65rem;
+    background: rgba(8, 30, 60, 0.95);
+}
+
+@media (max-width: 600px) {
+    .emote-option {
+        --radius: 96px;
+        width: 56px;
+        height: 56px;
+        font-size: 1.7rem;
+    }
+}
+
+/* Touch buttons: 💬 chat and 😀 emotes in a row above the others */
+.touch-buttons {
+    grid-template-areas:
+        '. chat emote'
+        'respawn map camera'
+        'boost boost boost';
+}
+
+html.has-deck .touch-buttons {
+    grid-template-areas:
+        'chat emote character'
+        'respawn map camera'
+        'boost boost boost';
+}
+
+.touch-button[data-action='chat'] {
+    grid-area: chat;
+}
+
+.touch-button[data-action='emote'] {
+    grid-area: emote;
+}
+
+/* "Multijugador" page of the pause menu */
+.room-field {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 16px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.room-field input,
+.room-join input {
+    width: 100%;
+    padding: 0.6em 0.9em;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font: inherit;
+    font-size: 1rem;
+    outline: none;
+}
+
+.room-field input:focus,
+.room-join input:focus {
+    border-color: #ffb347;
+}
+
+.room-create,
+.room-back {
+    width: 100%;
+    padding: 0.7em;
+    border: none;
+    border-radius: 999px;
+    background: #ffb347;
+    color: #3a1d00;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.room-create:disabled,
+.room-join button:disabled {
+    opacity: 0.5;
+    cursor: wait;
+}
+
+.room-back {
+    margin-top: 10px;
+}
+
+.room-join {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.room-join input {
+    flex: 1;
+    min-width: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-weight: 700;
+}
+
+.room-join .secondary-button {
+    width: auto;
+    margin: 0;
+    padding: 0.6em 1.2em;
+}
+
+.room-code-box {
+    display: grid;
+    gap: 4px;
+    padding: 12px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.08);
+    text-align: center;
+    font-size: 0.8rem;
+    opacity: 0.95;
+}
+
+.room-code-box strong {
+    font-size: 2rem;
+    letter-spacing: 0.25em;
+    color: #ffb347;
+}
+
+.room-share {
+    display: flex;
+    gap: 8px;
+}
+
+.room-share .secondary-button {
+    margin-top: 10px;
+    font-size: 0.85rem;
+}
+
+.room-players {
+    list-style: none;
+    display: grid;
+    gap: 6px;
+    margin: 14px 0 0;
+    font-size: 0.92rem;
+}
+
+.room-players li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.room-players i {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex: none;
+}
+
+/* ── Fishing economy: coins, Minecraft style inventory, rod shop ─────── */
+
+.hud-coins {
+    display: inline-block;
+    margin-top: 6px;
+    margin-right: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: rgba(8, 30, 60, 0.6);
+    color: #ffe08a;
+    font-size: 0.85rem;
+    font-weight: 800;
+}
+
+.hud-coins.bump {
+    animation: coins-bump 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.4);
+}
+
+@keyframes coins-bump {
+    40% {
+        transform: scale(1.25);
+        background: rgba(255, 179, 71, 0.85);
+        color: #3a1d00;
+    }
+}
+
+html.intro .hud-coins {
+    opacity: 0;
+}
+
+/* Overlay + window with Minecraft's grey bevels */
+.mc-overlay {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 12px;
+    background: rgba(10, 10, 16, 0.55);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s;
+    z-index: 8;
+}
+
+.mc-overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.mc-window {
+    --slot: clamp(34px, 9vw, 46px);
+    position: relative;
+    max-width: calc(100vw - 24px);
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+    padding: 14px 14px 12px;
+    background: #c6c6c6;
+    color: #3f3f3f;
+    border: 3px solid;
+    border-color: #ffffff #555555 #555555 #ffffff;
+    border-radius: 6px;
+    box-shadow: 0 0 0 3px #1d1d1d, 0 18px 40px rgba(0, 0, 0, 0.5);
+}
+
+.mc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 0 34px 4px 2px;
+}
+
+.mc-header h2 {
+    font-size: 1.05rem;
+    font-weight: 800;
+}
+
+.mc-coins {
+    padding: 2px 10px;
+    border-radius: 4px;
+    background: #3f3f3f;
+    color: #ffe08a;
+    font-weight: 800;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.mc-close {
+    top: 8px;
+    right: 8px;
+    color: #3f3f3f;
+    background: rgba(0, 0, 0, 0.08);
+}
+
+.mc-hint,
+.mc-label {
+    margin: 6px 2px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.mc-grid {
+    display: grid;
+    grid-template-columns: repeat(9, var(--slot));
+    gap: 2px;
+}
+
+.mc-hotbar {
+    margin-bottom: 4px;
+}
+
+.mc-slot {
+    position: relative;
+    width: var(--slot);
+    height: var(--slot);
+    padding: 0;
+    display: grid;
+    place-items: center;
+    background: #8b8b8b;
+    border: 2px solid;
+    border-color: #373737 #ffffff #ffffff #373737;
+    border-radius: 0;
+    cursor: pointer;
+    font: inherit;
+}
+
+.mc-slot:disabled {
+    cursor: default;
+}
+
+.mc-slot:not(:disabled):hover,
+.mc-slot:focus-visible {
+    background: #a8a8a8;
+    outline: none;
+}
+
+.mc-slot.selected {
+    box-shadow: inset 0 0 0 2px #ffe08a;
+    background: #a59a6a;
+}
+
+.mc-slot img {
+    width: 80%;
+    height: 80%;
+    image-rendering: pixelated;
+    pointer-events: none;
+}
+
+.mc-count {
+    position: absolute;
+    right: 2px;
+    bottom: 0;
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 0.8rem;
+    text-shadow: 2px 2px 0 #3f3f3f;
+    pointer-events: none;
+}
+
+.mc-footer {
+    margin: 8px 2px 0;
+    max-width: calc(var(--slot) * 9 + 16px);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.mc-button {
+    width: 100%;
+    margin-top: 10px;
+    padding: 0.6em;
+    background: #6f9c3c;
+    color: #ffffff;
+    border: 3px solid;
+    border-color: #9fd16a #3d5c1c #3d5c1c #9fd16a;
+    font: inherit;
+    font-weight: 800;
+    text-shadow: 1px 1px 0 #2f4a14;
+    cursor: pointer;
+}
+
+.mc-button:disabled {
+    background: #8b8b8b;
+    border-color: #a8a8a8 #555555 #555555 #a8a8a8;
+    text-shadow: none;
+    cursor: default;
+}
+
+/* Minecraft tooltip: dark purple box, the name in its rarity color */
+.mc-tooltip {
+    position: fixed;
+    left: 0;
+    top: 0;
+    max-width: 240px;
+    padding: 6px 9px;
+    background: rgba(16, 0, 16, 0.94);
+    border: 2px solid #2d0a63;
+    border-radius: 4px;
+    color: #c8c8c8;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    pointer-events: none;
+    z-index: 9;
+}
+
+.mc-tooltip-title {
+    font-weight: 800;
+    font-size: 0.92rem;
+}
+
+/* Rod shop rows */
+.shop-window {
+    width: min(520px, calc(100vw - 24px));
+}
+
+.shop-list {
+    display: grid;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.shop-row {
+    display: grid;
+    grid-template-columns: 52px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    background: #8b8b8b;
+    border: 2px solid;
+    border-color: #373737 #ffffff #ffffff #373737;
+    color: #ffffff;
+}
+
+.shop-row.in-use {
+    background: #8f8660;
+}
+
+.shop-icon {
+    width: 48px;
+    height: 48px;
+    image-rendering: pixelated;
+}
+
+.shop-info strong {
+    display: block;
+    text-shadow: 1px 1px 0 #3f3f3f;
+}
+
+.shop-info p {
+    margin: 2px 0 6px;
+    font-size: 0.75rem;
+    opacity: 0.95;
+}
+
+.shop-stats {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2px 8px;
+    align-items: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.shop-stats i {
+    height: 6px;
+    background: #3f3f3f;
+}
+
+.shop-stats b {
+    display: block;
+    height: 100%;
+    background: #6cf06c;
+}
+
+.shop-buy {
+    min-width: 92px;
+    padding: 0.55em 0.8em;
+    background: #6f9c3c;
+    color: #ffffff;
+    border: 3px solid;
+    border-color: #9fd16a #3d5c1c #3d5c1c #9fd16a;
+    font: inherit;
+    font-weight: 800;
+    font-size: 0.85rem;
+    text-shadow: 1px 1px 0 #2f4a14;
+    cursor: pointer;
+}
+
+.shop-buy:disabled {
+    background: #6b6b6b;
+    border-color: #8b8b8b #3f3f3f #3f3f3f #8b8b8b;
+    cursor: default;
+}
+
+.shop-buy.poor {
+    color: #ffb0b0;
+}
+
+@media (max-width: 480px) {
+    .shop-row {
+        grid-template-columns: 40px 1fr;
+    }
+
+    .shop-icon {
+        width: 36px;
+        height: 36px;
+    }
+
+    .shop-buy {
+        grid-column: 1 / -1;
+    }
+}
+
+/* Touch: 🎒 joins 💬 and 😀 on the top row */
+.touch-buttons {
+    grid-template-areas:
+        'inventory chat emote'
+        'respawn map camera'
+        'boost boost boost';
+}
+
+html.has-deck .touch-buttons {
+    grid-template-areas:
+        '. . character'
+        'inventory chat emote'
+        'respawn map camera'
+        'boost boost boost';
+}
+
+.touch-button[data-action='inventory'] {
+    grid-area: inventory;
+}
+
+html.touch.has-deck .chat {
+    bottom: calc(316px + env(safe-area-inset-bottom));
+}
+
+/* Inventory: your character (portrait + what you wear) next to the grid */
+.mc-body {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.mc-character {
+    display: grid;
+    gap: 6px;
+    justify-items: center;
+    padding-top: 26px;
+}
+
+.mc-portrait {
+    width: calc(var(--slot) * 2);
+    height: calc(var(--slot) * 3);
+    padding: 6px;
+    background: #000000;
+    border: 2px solid;
+    border-color: #373737 #ffffff #ffffff #373737;
+    image-rendering: pixelated;
+    object-fit: contain;
+}
+
+.mc-equip {
+    display: flex;
+    gap: 2px;
+}
+
+.mc-empty-hat::after {
+    content: '🎩';
+    opacity: 0.25;
+    filter: grayscale(1);
+}
+
+@media (max-width: 720px) {
+    .mc-body {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .mc-character {
+        grid-auto-flow: column;
+        align-items: end;
+        padding-top: 0;
+    }
+}

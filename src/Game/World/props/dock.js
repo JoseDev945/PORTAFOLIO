@@ -2,7 +2,11 @@ import * as THREE from 'three/webgpu'
 import { shadow } from '../materials.js'
 import lantern from './lantern.js'
 
+// Top of the planks: where someone on foot stands
+export const DECK_TOP = 0.975
+
 // Wooden pier. Built along its local +Z axis, starting at its position.
+// You can moor next to it and step off the boat to walk on it (F).
 export default {
     description: 'Muelle de madera',
     schema: {
@@ -33,15 +37,19 @@ export default {
             }
         }
 
+        const colliders = [{ shape: 'cuboid', size: [width / 2 + 0.2, 1.5, length / 2], position: [0, 0, length / 2], ground: true }]
         if (params.lantern) {
             const light = lantern.create({ params: { height: 2.2 }, materials }).object
             light.position.set(width / 2 - 0.1, 1, length - 0.6)
             group.add(light)
+            colliders.push({ shape: 'cuboid', size: [0.12, 1.1, 0.12], position: [width / 2 - 0.1, 2.1, length - 0.6] })
         }
 
         return {
             object: group,
-            colliders: [{ shape: 'cuboid', size: [width / 2 + 0.2, 1.5, length / 2], position: [0, 0, length / 2] }]
+            colliders,
+            // The planks, reaching a bit back onto the beach so the step off is seamless
+            walkable: [{ size: [width / 2, length / 2 + 0.5], position: [0, DECK_TOP, length / 2 - 0.5] }]
         }
     }
 }

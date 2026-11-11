@@ -1,7 +1,7 @@
 # Contexto del proyecto (para continuar en un chat nuevo)
 
 > Pega o adjunta este archivo al empezar un chat nuevo. Resume todo lo hablado y construido
-> hasta el 6 de noviembre de 2026. Los detalles técnicos de cada sistema están en
+> hasta el 10 de noviembre de 2026. Los detalles técnicos de cada sistema están en
 > [ARCHITECTURE.md](ARCHITECTURE.md); este archivo explica **qué se hizo, por qué, cómo se
 > trabajó y qué falta**.
 
@@ -41,6 +41,7 @@ proyecto.
 | Paquetes | pnpm 12.15 con reglas de seguridad |
 | Depuración | Tweakpane, se carga solo con `#debug` |
 | Audio | Web Audio API (todo sintetizado, sin archivos) |
+| Multijugador | PeerJS 1.5.5 (WebRTC; se descarga solo al crear o unirse a una sala) |
 
 Comandos:
 
@@ -84,9 +85,11 @@ src/
    │  ├─ props/     catálogo de objetos (un archivo = un tipo, se registra solo)
    │  └─ Fauna/     Fauna, Fish, Turtles, Dolphins, Reef
    ├─ Boat/         Boat, BoatMesh, Wake, Spray
+   ├─ Character/    Character (a bordo y en tierra), Avatar
+   ├─ Network/      Network (salas PeerJS), RemotePlayers, Emotes, emoteList
    ├─ UI/           StartScreen, ProjectCard, BoatCard, PauseMenu, ControlsPanel,
-   │                KeyHints, WorldMap, CameraToast
-   └─ utils/        schema (validación), merge, random, pointer, keys
+   │                KeyHints, WorldMap, CameraToast, Chat, EmoteWheel, RoomPanel
+   └─ utils/        schema (validación), merge, random, pointer, keys, players
 ```
 
 Principios clave:
@@ -100,7 +103,7 @@ Principios clave:
   zonas) para poder deshacerlo.
 - **Catálogo de props**: cada archivo en `World/props/` se registra solo con
   `import.meta.glob`. Un prop declara `schema`, `create()`, `colliders`, opcionalmente `zones`,
-  `body` (física dinámica) y `animated` (tiene `update()`).
+  `body` (física dinámica), `animated` (tiene `update()`), `walkable` (pisos a pie) y `berths` (amarres).
 - **Sistemas y piezas**: un *sistema* usa `Game.getInstance()` y se registra en el ticker o en
   eventos; una *pieza* recibe sus datos por parámetro.
 - **Tiempo de juego y tiempo real separados**: `ticker.gameDelta` y `ticker.elapsed` se
@@ -109,8 +112,9 @@ Principios clave:
 ### Eventos principales
 
 `tick`, `start`, `pause`, `content:change`, `world:build`, `zone:change` (payload
-`{type:'project'|'boat', …}`), `interact` (Enter), `settings:change`, `quality:change`,
-`camera:change`, `ui:click` y `action:<nombre>`.
+`{type:'project'|'boat', …}`), `interact` (F al timón o E), `settings:change`, `quality:change`,
+`camera:change`, `ui:click`, `action:<nombre>`, `boat:place`, `net:status`, `net:players`,
+`chat:message` y `emote`.
 
 ---
 
@@ -341,6 +345,69 @@ Principios clave:
     apaga con un uniform que se desvanece. **Regla: nunca llamar `setPipeline()` por algo que pase
     durante el juego**; usar uniforms.
 
+32. **Multijugador, muelle grande, caminar en tierra, chat y emotes** (10 de noviembre de 2026). Pidió todo
+    esto "sin arruinar nada y sin perder FPS":
+    - **Salas de hasta 5 jugadores** (Pausa → 👥 Multijugador): "Crear sala" da un **código de 5 letras** y un
+      **enlace** (`?sala=CODIGO`) para compartir; "Unirse" con el código. Tu nombre se guarda (`playerName`).
+      Va navegador a navegador con **PeerJS** (WebRTC, servidor gratuito de peerjs.com, sin servidor propio);
+      el que crea la sala es el anfitrión y reenvía todo. PeerJS (86 KB) solo se descarga al crear o unirse.
+      Si el anfitrión se va, la sala se cierra. Arriba a la izquierda sale "👥 Sala CÓDIGO · 3/5";
+    - los demás se ven con **su bote, su persona (con el color de su amarre) y su nombre encima**, suavizados
+      (se dibujan 170 ms atrás, interpolando). Los botes chocan entre sí (collider cinemático). En el mapa
+      salen como puntos de color con nombre;
+    - **muelle grande (prop `marina`)** al sur de la isla de inicio: pasarela, cabezal en T y dedos con
+      **5 amarres**, uno por jugador con su color. Todos empiezan ahí (al unirte a una sala vas a tu amarre).
+      **R** te regresa a tu amarre. El anillo del proyecto de la isla se movió al este;
+    - **bajarse y caminar** en cualquier isla: con el bote quieto junto a un muelle o una playa, **F** "Bajar al
+      muelle / a tierra"; cerca del bote, **F** "Subir al bote". El bote queda amarrado (no se va a la deriva y
+      el motor se apaga). En tierra chocas con palmeras, rocas, faroles y botes; puedes subir de la arena al pasto;
+    - **Enter ya no abre proyectos: ahora es F** (E también sirve). **Enter es el chat**, fijo como Esc;
+    - **chat estilo League of Legends abajo a la derecha**: Enter escribe, Enter envía, Esc cancela; los
+      mensajes se desvanecen a los 10 s y al abrirlo se ve el historial. Sube solo si hay una tarjeta de
+      proyecto en esa esquina. Solo, te avisa que crees una sala;
+    - **T: rueda de emotes** (8: 👋 😂 😍 😎 😮 😡 👍 🎉, clic o 1–8); el emoji sale **grande sobre tu bote** (o
+      tu cabeza en tierra) y lo ven todos;
+    - celular: botones 💬 y 😀; bajarse/subir aparece como botón arriba;
+    - FPS: lo nuevo es barato (la marina se fusiona por material, los botes remotos también, un sprite por
+      emote reutilizado, la red va en un temporizador aparte).
+
+33. **Correcciones del multijugador y puerto pesquero con economía** (10 de noviembre de 2026). Lo probó con un
+    amigo:
+    - **el bote del otro parpadeaba por dentro**: los botes con cubierta tienen una tapa invisible (solo escribe
+      profundidad, `renderOrder` 10) para que no se vea el agua dentro del casco. Al fusionar el bote remoto con
+      `mergeByMaterial` perdía su orden de dibujo. **Regla: `mergeByMaterial` ya no fusiona mallas con
+      `renderOrder` ni de solo profundidad (`colorWrite: false`)**;
+    - **se quitó el clic derecho** (prendía las luces en primera persona y cambiaba a primera persona en las otras
+      cámaras). Las luces son L y pescar es G;
+    - **mapa en primera persona (PC)**: al abrirlo se libera el mouse para poder tocar las islas; al cerrarlo se
+      vuelve a bloquear;
+    - **isla de inicio más grande (radio 18) con puerto pesquero**: frente a la marina hay dos puestos con
+      vendedores (prop `stall`, personas sin mascarilla, con sombrero o delantal): **Cañas · Don Beto** y
+      **Pescadería · Doña Marta**. Caminando frente al mostrador, **F** abre la tienda;
+    - **economía**: cada pez tiene precio (`price` en `data/fish.js`; los grandes valen hasta ×1,4 y los chicos
+      ×0,6). Especies nuevas: sardina, pez globo, mero, pez espada y el legendario pez luna. Rarezas con colores
+      tipo Minecraft (común, poco común, raro, épico, legendario) según `chance`;
+    - **6 cañas** (`data/rods.js`), cada una con **forma distinta** (bambú, fibra, telescópica, carbono, curricán
+      y dorada) y estadísticas: **suerte** (peces raros más seguido y más grandes), **rapidez** (pican antes) y
+      **reflejos** (más tiempo para recoger). La que compras es la que tienes en la mano;
+    - **inventario estilo Minecraft** (`UI/InventoryPanel.js`): apunta a la **tina** en primera persona y **F**,
+      o la tecla **I** (🎒 en celular). 9×4 casillas, una pila por especie (hasta 64), cuadro con rareza, peso y
+      valor al pasar el mouse, y abajo tus cañas (clic para usarla). En la pescadería es el mismo panel en modo
+      venta: clic en una pila la vende, o "Vender todo". Las monedas 🪙 se ven bajo el título;
+    - se guarda en `localStorage` `portafolio-inventario` (lo de la tina vieja `portafolio-pesca` se pasó solo).
+    - Mientras hay un panel abierto, las teclas del juego no hacen nada; Esc, E, I o F lo cierran.
+
+34. **Pescar con clic, ropa y personaje** (10 de noviembre de 2026). **Pide respuestas cortas (gasta tokens).**
+    - **PC: clic derecho lanza y recoge** (primera persona, mouse bloqueado). Se quitó la G (`fish` es fija, sin
+      teclas; en celular sigue 🎣). F sigue tomando la caña que apuntas;
+    - **E abre el inventario** (también I), en el bote o en tierra. Se quitó la acción "abrir proyecto con E": los
+      anillos se usan con F;
+    - el inventario muestra **tu personaje** (retrato pixelado), lo que llevas puesto (clic = quitar) y una fila
+      **Ropa** (clic = ponerse);
+    - **tercer puesto: Ropa · Lupita** (`kind: 'style'`), con maniquíes: **7 trajes y 6 sombreros**
+      (`data/cosmetics.js`: paja, gorra, gorro, capitán, pirata, corona). Lo comprado se pone solo;
+    - **los demás jugadores ven tu traje y sombrero** (campo `a` del estado de red).
+
 ### Errores visuales ya resueltos (por si reaparecen)
 
 - **Borda negra que parpadeaba** (ferry y Corvina): compartía caras con la pared blanca. Ahora va
@@ -368,7 +435,8 @@ Principios clave:
 - `?hora=noche`, `?hora=amanecer`, `?hora=dia` o `?hora=atardecer`: empieza a esa hora.
 
 **Ajustes guardados** (localStorage `portafolio-settings`): `music`, `effects`, `mouseCamera`,
-`steering`, `boat`, `camera`, `bindings`, `resolution` (0,01–1), `reflections` y `showFps`.
+`steering`, `boat`, `camera`, `bindings`, `resolution` (0,01–1), `reflections`, `showFps` y
+`playerName` (nombre en las salas). Aparte: `portafolio-inventario` (monedas, peces, cañas).
 
 **Teclas por defecto**:
 
@@ -378,14 +446,17 @@ Principios clave:
 | Turbo | Shift |
 | Reaparecer | R |
 | Mapa | Tab / M |
-| Abrir proyecto / usar bote | Enter / E |
+| Abrir proyecto / usar bote | F (al timón) |
 | Cambiar cámara | C / F5 |
-| Caminar / sentarse / timón; usar lo que apuntas (primera persona) | F |
+| Usar: bajar al muelle / subir al bote, caminar, sentarse, timón, lo que apuntas | F |
+| Chat (fijo) | Enter |
+| Emotes | T (y 1–8 con la rueda abierta) |
+| Inventario y personaje (también F apuntando a la tina) | E / I |
 | Luces del bote | L |
-| Pescar / recoger (Corvina, primera persona) | G / clic derecho |
+| Pescar / recoger (Corvina, primera persona) | Clic derecho (🎣 en celular) |
 | Pausa | Esc (fija) |
 
-**Islas en `world.js`**: `inicio` (proyecto `about`), `astillero` (Botes Galileo),
+**Islas en `world.js`**: `inicio` (proyecto `about`, radio 18, **marina** de 5 amarres y **puerto** con tienda de cañas y pescadería), `astillero` (Botes Galileo),
 `isla-dos`…`isla-cinco` (proyectos de ejemplo, **textos de relleno**) e `islote` (sin proyecto).
 
 ---
@@ -403,6 +474,9 @@ Principios clave:
 - Al editar con scripts de `node -e`, las comillas invertidas (backticks) se rompen en bash.
   Usa el editor o un script en un archivo aparte.
 - Después de editar, revisa la sintaxis con `node --check archivo.js` y luego `pnpm build`.
+- **Windows no distingue mayúsculas en los nombres**: `emotes.js` y `Emotes.js` son el mismo archivo (por eso
+  la lista se llama `emoteList.js`). No uses dos nombres que solo cambien en mayúsculas.
+- En esta PC no hay Python: para editar usa el editor o scripts de Node.
 - **Lighthouse local**: `pnpm build`, levantar `preview` (puerto 4173, está en `.claude/launch.json`) y
   `npx lighthouse@12 http://localhost:4173/ --chrome-flags="--headless=new"` (móvil por defecto). La API
   de PageSpeed sin clave no tiene cuota. El TBT varía mucho entre corridas (3 a 12 s): compara varias.
@@ -419,6 +493,11 @@ Principios clave:
   `@dimforge/rapier3d` con `vite-plugin-wasm`, como hace Bruno.
 - **Probar en dispositivos reales**: celular (controles táctiles), y medir FPS en el navegador
   normal (no en el panel de vista previa).
+- **Economía**: ajustar precios de peces y cañas cuando lo juegue un rato; quizá más cosas que comprar
+  (colores de bote, carnada).
+- **Multijugador**: ya se probó con un amigo (se corrigió el parpadeo del bote remoto). Posibles siguientes pasos:
+  migrar el anfitrión si se va, compartir la hora del día y las olas entre todos, servidor propio de
+  PeerJS si el gratuito falla, y que las luces del bote de los demás se vean.
 - **Ideas mencionadas o naturales**:
   - modelos de Blender (`.glb`) con un sistema `Resources`;
   - música real (Howler);

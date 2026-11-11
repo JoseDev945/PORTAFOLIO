@@ -1,5 +1,5 @@
 import { Game } from '../Game.js'
-import { ACTION_LABELS, REBINDABLE } from '../Inputs.js'
+import { ACTION_LABELS, REBINDABLE, RESERVED_KEYS } from '../Inputs.js'
 import { keyLabel } from '../utils/keys.js'
 
 // "Controles" page of the pause menu: two key slots per action. Click a
@@ -101,6 +101,12 @@ export class ControlsPanel {
         this.stopWaiting()
         if (event.code === 'Escape') {
             this.say('Cancelado')
+            this.render()
+            return
+        }
+        // Enter belongs to the chat
+        if (RESERVED_KEYS.includes(event.code)) {
+            this.say(`${keyLabel(event.code)} es para el chat, elige otra tecla`)
             this.render()
             return
         }

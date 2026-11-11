@@ -10,7 +10,10 @@ const TUB = { width: 0.85, length: 0.6, height: 0.42, wall: 0.04 }
 
 // A fishing rod standing on its butt (origin), pointing up +y.
 // userData.tip is an empty at the tip, where the line comes out.
-export function createRod(color = ROD_COLORS[0]) {
+// style (see data/rods.js): 'classic' | 'bamboo' | 'carbon' | 'telescopic' | 'trolling' | 'golden'.
+// A plain color string is a classic rod of that color.
+export function createRod(options = {}) {
+    const { style = 'classic', color = ROD_COLORS[0] } = typeof options === 'string' ? { color: options } : options
     const rod = new THREE.Group()
     const add = (geometry, material, y) => {
         const mesh = new THREE.Mesh(geometry, material)
@@ -19,15 +22,84 @@ export function createRod(color = ROD_COLORS[0]) {
         rod.add(mesh)
         return mesh
     }
-    add(new THREE.CylinderGeometry(0.024, 0.026, 0.42, 6), colorMaterial('#4a3426'), 0.21)
-    add(new THREE.CylinderGeometry(0.03, 0.03, 0.04, 6), colorMaterial('#1d1f26'), 0.44)
-    add(new THREE.CylinderGeometry(0.004, 0.016, 1.7, 5), colorMaterial(color), 0.46 + 0.85)
-    // Spinning reel under the handle
-    const reel = add(new THREE.CylinderGeometry(0.045, 0.045, 0.05, 8), colorMaterial('#c8ccd4'), 0.36)
-    reel.rotation.z = Math.PI / 2
-    reel.position.z = 0.06
+    // A tapering piece of the blank from y0 to y1
+    const blank = (y0, y1, bottom, top, material) => add(new THREE.CylinderGeometry(top, bottom, y1 - y0, 6), material, (y0 + y1) / 2)
+    const ring = (y, radius, material) => add(new THREE.CylinderGeometry(radius, radius, 0.025, 8), material, y)
+    const reel = (y, radius, width, material, z = 0.06) => {
+        const mesh = add(new THREE.CylinderGeometry(radius, radius, width, 10), material, y)
+        mesh.rotation.z = Math.PI / 2
+        mesh.position.z = z
+        return mesh
+    }
+    const main = colorMaterial(color)
+    const cork = colorMaterial('#b98b55')
+    const dark = colorMaterial('#1d1f26')
+    const steel = colorMaterial('#c8ccd4')
+    let tipY = 2.15
+
+    if (style === 'bamboo') {
+        // Cane in segments with darker knots, cork grip, small reel
+        add(new THREE.CylinderGeometry(0.026, 0.028, 0.4, 6), cork, 0.2)
+        const knot = colorMaterial('#8a6a35')
+        const joints = [0.42, 0.95, 1.45, 1.9, 2.2]
+        for (let i = 0; i < joints.length - 1; i++) {
+            const bottom = 0.026 - i * 0.005
+            blank(joints[i], joints[i + 1], bottom, bottom - 0.004, main)
+            ring(joints[i + 1], bottom - 0.001, knot)
+        }
+        reel(0.34, 0.04, 0.045, steel)
+        tipY = 2.2
+    } else if (style === 'carbon') {
+        // Long foam grip, red thread wraps, thin black blank, big silver reel
+        add(new THREE.CylinderGeometry(0.03, 0.032, 0.55, 8), dark, 0.275)
+        blank(0.55, 2.35, 0.016, 0.003, main)
+        const wrap = colorMaterial('#e63946')
+        for (const y of [0.62, 1.1, 1.6, 2.05]) ring(y, 0.012 - (y - 0.6) * 0.004, wrap)
+        reel(0.42, 0.055, 0.06, steel)
+        tipY = 2.35
+    } else if (style === 'telescopic') {
+        // Stepped sections, each with a collar
+        add(new THREE.CylinderGeometry(0.028, 0.03, 0.42, 8), dark, 0.21)
+        const sections = [0.42, 1.0, 1.55, 2.05, 2.45]
+        for (let i = 0; i < sections.length - 1; i++) {
+            const radius = 0.02 - i * 0.004
+            blank(sections[i], sections[i + 1], radius, radius - 0.002, main)
+            ring(sections[i] + 0.02, radius + 0.004, dark)
+        }
+        reel(0.36, 0.045, 0.05, colorMaterial('#2f6db5'))
+        tipY = 2.45
+    } else if (style === 'trolling') {
+        // Short and thick: gimbal butt, big golden lever reel on top, roller tip
+        add(new THREE.CylinderGeometry(0.035, 0.03, 0.12, 8), steel, 0.06)
+        add(new THREE.CylinderGeometry(0.034, 0.034, 0.45, 8), dark, 0.34)
+        blank(0.56, 1.72, 0.028, 0.008, main)
+        const gold = colorMaterial('#f2c14e')
+        const big = reel(0.62, 0.075, 0.085, gold, 0.09)
+        big.position.y = 0.66
+        for (const y of [0.9, 1.2, 1.5]) ring(y, 0.03 - (y - 0.9) * 0.02, steel)
+        const roller = add(new THREE.CylinderGeometry(0.018, 0.018, 0.05, 8), steel, 1.72)
+        roller.rotation.z = Math.PI / 2
+        tipY = 1.75
+    } else if (style === 'golden') {
+        // Golden blank, dark wood grip, glowing gems at the butt and the tip
+        add(new THREE.CylinderGeometry(0.027, 0.03, 0.44, 8), colorMaterial('#3b2416'), 0.22)
+        blank(0.44, 2.25, 0.017, 0.004, main)
+        const gem = colorMaterial('#7ff6ff', true)
+        add(new THREE.OctahedronGeometry(0.035, 0), gem, -0.02)
+        add(new THREE.OctahedronGeometry(0.022, 0), gem, 2.25)
+        for (const y of [0.8, 1.3, 1.8]) ring(y, 0.013 - (y - 0.8) * 0.004, colorMaterial('#fff1c1'))
+        reel(0.36, 0.05, 0.055, colorMaterial('#f2c14e'))
+        tipY = 2.25
+    } else {
+        add(new THREE.CylinderGeometry(0.024, 0.026, 0.42, 6), colorMaterial('#4a3426'), 0.21)
+        add(new THREE.CylinderGeometry(0.03, 0.03, 0.04, 6), dark, 0.44)
+        add(new THREE.CylinderGeometry(0.004, 0.016, 1.7, 5), main, 0.46 + 0.85)
+        // Spinning reel under the handle
+        reel(0.36, 0.045, 0.05, steel)
+    }
+
     const tip = new THREE.Object3D()
-    tip.position.y = 2.15
+    tip.position.y = tipY
     rod.add(tip)
     rod.userData.tip = tip
     return rod
@@ -105,10 +177,17 @@ export function buildFishingGear(root, { holders, tub }) {
     contents.position.set(tub.x, tub.y + height * 0.62 + 0.03, tub.z)
     root.add(contents)
 
+    // Invisible box around the tub for the crosshair (F opens your catch)
+    const aim = new THREE.Mesh(new THREE.BoxGeometry(width + 0.2, height + 0.3, length + 0.2), aimMaterial)
+    aim.position.set(tub.x, tub.y + (height + 0.3) / 2, tub.z)
+    aim.userData.keep = true
+    root.add(aim)
+
     return {
         rods,
         slots,
         tub: {
+            aim,
             contents,
             // Inner half sizes, to lay the fish inside
             half: { x: (width - wall * 2) / 2, z: (length - wall * 2) / 2 },

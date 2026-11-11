@@ -10,6 +10,8 @@
 export const world = {
     // Boat type from data/boats.js
     playerBoat: 'galileo-corvina',
+    // Only used when there is no marina: players start at its berths (one per
+    // player in a multiplayer room, see the 'marina' prop of the start island)
     spawn: { x: 5, z: 26, angle: 0 },
 
     // Sea life: schools of fish and turtles around the islands, a pod of
@@ -42,21 +44,58 @@ export const world = {
     //   project     id from data/projects.js → sign, zone and card (optional)
     //   palms, rocks, shoreRocks   amount of random decoration
     //   dock        { angle, length } or false. angle null = facing the start island
+    //   zone        { angle, distance } where the project ring goes (default: past the dock)
     //   props       extra objects, with x / z relative to the island center
+    // Docks, beaches and grass can be walked on: moor next to them and press F.
     islands: [
+        // Start island: a fishing port. Everyone starts at the marina to the
+        // south; walking up from it there are two stalls with vendors: rods
+        // (buy better ones with your coins) and the fish market (sell your catch).
         {
             id: 'inicio',
             x: 0,
             z: 0,
-            radius: 9,
+            radius: 18,
             seed: 7,
             project: 'about',
-            dock: { angle: 90 },
-            palms: 3,
-            rocks: 3,
+            // The marina replaces the small dock; the project ring goes east
+            dock: false,
+            zone: { angle: 0, distance: 27 },
+            palms: 0,
+            rocks: 0,
+            shoreRocks: 6,
+            flora: 18,
             props: [
-                { type: 'crate', x: -3, z: 2.5, angle: 20 },
-                { type: 'barrel', x: -2, z: 3.6 }
+                // Big marina: one berth per player (5), in their color.
+                // Walkway, T head and finger piers.
+                { type: 'marina', x: 0, z: 13.2, y: 0, angle: 0, stem: 19, berths: 5 },
+
+                // The port: rod shop and fish market facing the marina, clothing stall
+                { type: 'stall', kind: 'rods', x: -5.5, z: 6 },
+                { type: 'stall', kind: 'fish', x: 5.5, z: 6 },
+                // Clothes and hats, facing the island center
+                { type: 'stall', kind: 'style', x: -9, z: 0, angle: 90 },
+                { type: 'lantern', x: -2.2, z: 10 },
+                { type: 'lantern', x: 2.2, z: 10 },
+                { type: 'lantern', x: -8.6, z: 3 },
+                { type: 'lantern', x: 8.6, z: 3 },
+                { type: 'crate', x: -8.8, z: 7.4, angle: 20 },
+                { type: 'crate', x: -8.4, z: 8.6, size: 0.6 },
+                { type: 'barrel', x: 8.8, z: 7.6, color: '#2e86ab' },
+                { type: 'barrel', x: 9.4, z: 6.6 },
+                { type: 'crate', x: 8.3, z: 8.7, angle: -15 },
+
+                // The rest of the island
+                { type: 'palm', x: -11, z: -3 },
+                { type: 'palm', x: 10, z: -6 },
+                { type: 'palm', x: -4, z: -11 },
+                { type: 'palm', x: 6, z: -10 },
+                { type: 'palm', x: 11, z: 2 },
+                { type: 'palm', x: -1, z: -3 },
+                { type: 'rock', x: -9, z: -7, size: 1.5 },
+                { type: 'rock', x: 7.5, z: -2.5, size: 1.2 },
+                { type: 'crate', x: -3, z: 0.5, angle: 20 },
+                { type: 'barrel', x: -2, z: 1.6 }
             ]
         },
         // Fiberglass boat shipyard: the production line from mold to water.
@@ -160,21 +199,22 @@ export const world = {
 
     // Objects in open water (catalog in src/Game/World/props/)
     props: [
-        { type: 'buoy', x: 22, z: 38 },
-        { type: 'buoy', x: -22, z: 34, color: '#2ecc71' },
+        // Buoys marking the way out of the marina
+        { type: 'buoy', x: 27, z: 56 },
+        { type: 'buoy', x: -27, z: 54, color: '#2ecc71' },
         { type: 'buoy', x: 30, z: -18 },
-        { type: 'boat', model: 'velero', x: -14, z: 20, angle: 30 },
-        { type: 'boat', model: 'pesquero', x: 16, z: 10, angle: -60 },
+        { type: 'boat', model: 'velero', x: -32, z: 14, angle: 30 },
+        { type: 'boat', model: 'pesquero', x: 34, z: 18, angle: -60 },
         { type: 'rock', x: -40, z: 40, size: 1.6 },
         { type: 'rock', x: 12, z: -30, size: 1.2 },
 
-        // Floating things right in front of the start, to bump into
-        { type: 'barrel', x: 2, z: 38 },
-        { type: 'barrel', x: 4.5, z: 40, color: '#2e86ab' },
-        { type: 'barrel', x: 9, z: 37, angle: 40 },
-        { type: 'crate', x: 6.5, z: 43, angle: 20 },
-        { type: 'crate', x: 0, z: 42, size: 0.6 },
-        { type: 'ball', x: 12, z: 45 },
-        { type: 'ball', x: -3, z: 46, color: '#457b9d' }
+        // Floating things out in front of the marina, to bump into
+        { type: 'barrel', x: 2, z: 68 },
+        { type: 'barrel', x: 4.5, z: 70, color: '#2e86ab' },
+        { type: 'barrel', x: 9, z: 67, angle: 40 },
+        { type: 'crate', x: 6.5, z: 73, angle: 20 },
+        { type: 'crate', x: 0, z: 72, size: 0.6 },
+        { type: 'ball', x: 12, z: 75 },
+        { type: 'ball', x: -3, z: 76, color: '#457b9d' }
     ]
 }

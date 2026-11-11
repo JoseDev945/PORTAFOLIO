@@ -245,20 +245,21 @@ export class View {
     }
 
     update() {
-        const { boat, inputs } = this.game
+        const { inputs, character } = this.game
         const delta = this.game.ticker.delta
         const boatDriving = this.game.playing && inputs.throttle !== 0
-        if (this.mode === 'overview') this.updateOverview(delta, boatDriving)
-        else this.updateBoatCamera(delta, boatDriving)
+        // What the camera follows: the boat, or the person walking on land
+        const rig = character.rig()
+        if (this.mode === 'overview') this.updateOverview(delta, boatDriving, rig)
+        else this.updateBoatCamera(delta, boatDriving, rig)
 
         // Whatever the mode, the world stays centered on the boat area
-        if (this.mode !== 'overview') this.smoothTarget.set(boat.mesh.position.x, 0, boat.mesh.position.z)
+        if (this.mode !== 'overview') this.smoothTarget.set(rig.position.x, 0, rig.position.z)
     }
 
-    updateOverview(delta, boatDriving) {
-        const { boat } = this.game
-        const focus = boat.mesh.position
-        const velocity = this.game.state.paused ? { x: 0, z: 0 } : boat.body.linvel()
+    updateOverview(delta, boatDriving, rig) {
+        const focus = rig.position
+        const velocity = this.game.state.paused ? { x: 0, z: 0 } : rig.velocity
 
         // Glide back to the boat as soon as it drives, or when the option is turned off
         if (!this.mouseEnabled || (!this.drag.active && boatDriving)) {
@@ -274,13 +275,12 @@ export class View {
         this.camera.lookAt(this.smoothTarget)
     }
 
-    updateBoatCamera(delta, boatDriving) {
-        const { boat } = this.game
+    updateBoatCamera(delta, boatDriving, rig) {
         const chase = this.chase
-        const position = boat.mesh.position
+        const position = rig.position
 
         // Boat heading only (ignore roll and pitch so the camera doesn't seasick you)
-        _euler.setFromQuaternion(boat.mesh.quaternion, 'YXZ')
+        _euler.setFromQuaternion(rig.quaternion, 'YXZ')
         if (!chase.initialized) {
             chase.yaw = _euler.y
             chase.look.set(position.x, position.y + 1.2, position.z)
@@ -304,10 +304,10 @@ export class View {
         if (this.mode === 'first') {
             // At the helm: boat heading + half of its roll/pitch, plus where you look
             _yawQuaternion.setFromAxisAngle(_up, chase.yaw)
-            _quaternion.copy(_yawQuaternion).slerp(boat.mesh.quaternion, 0.5)
-            const eye = boat.eye ?? [0, 1.5, -1]
+            _quaternion.copy(_yawQuaternion).slerp(rig.quaternion, 0.5)
+            const eye = rig.eye ?? [0, 1.5, -1]
             this.camera.position.set(...eye).applyQuaternion(_quaternion).add(position)
-            _orbitQuaternion.setFromEuler(_euler.set(-chase.orbitPitch, chase.orbitYaw + Math.PI + (boat.eyeYaw ?? 0), 0, 'YXZ'))
+            _orbitQuaternion.setFromEuler(_euler.set(-chase.orbitPitch, chase.orbitYaw + Math.PI + (rig.eyeYaw ?? 0), 0, 'YXZ'))
             this.camera.quaternion.copy(_quaternion).multiply(_orbitQuaternion)
             return
         }
@@ -316,7 +316,8 @@ export class View {
         const side = this.mode === 'behind' ? -1 : 1
         const angle = chase.yaw + chase.orbitYaw
         const pitch = 0.32 + chase.orbitPitch
-        const distance = chase.distance + boat.half.z
+        // Further from long boats, closer to a person on foot
+        const distance = Math.max(2.5, chase.distance + rig.half)
         _offset.set(Math.sin(angle) * side, 0, Math.cos(angle) * side).multiplyScalar(Math.cos(pitch) * distance)
         // Relative to the look point, which is already 1.2 m above the boat
         _offset.y = Math.sin(pitch) * distance - 0.2

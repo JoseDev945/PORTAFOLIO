@@ -52,6 +52,8 @@
     <div class="hud">
         <div class="hud-title">Mi Portafolio</div>
         <div class="hud-hint" data-hints="hud"></div>
+        <div class="hud-coins" id="hud-coins"></div>
+        <div class="room-badge" id="room-badge" hidden></div>
     </div>
 
     <div class="project-card" id="project-card">
@@ -61,7 +63,7 @@
         <img class="project-image" id="project-image" alt="" hidden />
         <p id="project-description"></p>
         <div class="project-tags" id="project-tags"></div>
-        <a id="project-link" target="_blank" rel="noopener">Ver proyecto ↗ <kbd class="desktop-only" data-hints="open"></kbd></a>
+        <a id="project-link" target="_blank" rel="noopener">Ver proyecto ↗ <kbd class="desktop-only" data-hints="character"></kbd></a>
     </div>
 
     <div class="project-card boat-card" id="boat-card">
@@ -77,6 +79,70 @@
     <div class="camera-toast fish-toast" id="fish-toast" aria-live="polite"></div>
     <div class="fish-hud" id="fish-hud"></div>
     <div class="crosshair" id="crosshair" aria-hidden="true"></div>
+
+    <!-- Chat (Enter), bottom right like League of Legends -->
+    <div class="chat" id="chat">
+        <div class="chat-log" id="chat-log" aria-live="polite"></div>
+        <div class="chat-box">
+            <input class="chat-input" id="chat-input" type="text" autocomplete="off" spellcheck="false" enterkeyhint="send" placeholder="Escribe y presiona Enter · Esc cancela" aria-label="Mensaje del chat" />
+            <button class="chat-send" id="chat-send" aria-label="Enviar">➤</button>
+        </div>
+    </div>
+    <!-- Your catch (F on the tub, I, or the fish market), Minecraft style -->
+    <div class="mc-overlay" id="inventory">
+        <div class="mc-window" role="dialog" aria-labelledby="inventory-title">
+            <button class="card-close mc-close" aria-label="Cerrar">✕</button>
+            <div class="mc-header">
+                <h2 id="inventory-title">Tus pescados</h2>
+                <span class="mc-coins" id="inventory-coins"></span>
+            </div>
+            <div class="mc-body">
+                <div class="mc-character" id="inventory-character">
+                    <img class="mc-portrait" id="inventory-portrait" alt="Tu personaje" />
+                    <div class="mc-equip" id="inventory-equip"></div>
+                </div>
+                <div class="mc-main">
+                    <p class="mc-hint" id="inventory-hint"></p>
+                    <div class="mc-grid" id="inventory-grid"></div>
+                    <div class="mc-label">Cañas</div>
+                    <div class="mc-grid mc-hotbar" id="inventory-rods"></div>
+                    <div class="mc-label mc-clothes-label">Ropa</div>
+                    <div class="mc-grid mc-hotbar" id="inventory-clothes"></div>
+                </div>
+            </div>
+            <p class="mc-footer" id="inventory-footer"></p>
+            <button class="mc-button" id="inventory-sell-all" hidden>Vender todo</button>
+        </div>
+        <div class="mc-tooltip" id="mc-tooltip" hidden></div>
+    </div>
+    <!-- Rod shop at the port -->
+    <div class="mc-overlay" id="rod-shop">
+        <div class="mc-window shop-window" role="dialog" aria-labelledby="rod-shop-title">
+            <button class="card-close mc-close" aria-label="Cerrar">✕</button>
+            <div class="mc-header">
+                <h2 id="rod-shop-title">Cañas · Don Beto</h2>
+                <span class="mc-coins" id="rod-coins"></span>
+            </div>
+            <div class="shop-list" id="rod-list"></div>
+            <p class="mc-footer" id="rod-message"></p>
+        </div>
+    </div>
+
+    <!-- Clothing stall at the port -->
+    <div class="mc-overlay" id="style-shop">
+        <div class="mc-window shop-window" role="dialog" aria-labelledby="style-shop-title">
+            <button class="card-close mc-close" aria-label="Cerrar">✕</button>
+            <div class="mc-header">
+                <h2 id="style-shop-title">Ropa · Lupita</h2>
+                <span class="mc-coins" id="style-coins"></span>
+            </div>
+            <div class="shop-list" id="style-list"></div>
+            <p class="mc-footer" id="style-message"></p>
+        </div>
+    </div>
+
+    <!-- Emotes (T): the buttons are made by UI/EmoteWheel.js -->
+    <div class="emote-wheel" id="emote-wheel" role="dialog" aria-label="Emotes"></div>
 
     <div class="map" id="map">
         <button class="map-close" id="map-close" aria-label="Cerrar mapa">✕</button>
@@ -132,6 +198,7 @@
                 <output for="steering-input"></output>
                 <input type="range" id="steering-input" min="0.5" max="1.5" step="0.05" data-setting="steering" />
             </div>
+            <button class="secondary-button" id="room-button">👥 Multijugador</button>
             <button class="secondary-button desktop-only" id="controls-button">⌨ Controles</button>
             <button id="resume-button">Continuar</button>
             <div class="pause-keys desktop-only" data-hints="pause"></div>
@@ -146,6 +213,36 @@
                 <button class="secondary-button" id="controls-reset">Restablecer</button>
                 <button id="controls-back">Volver</button>
             </div>
+        </div>
+
+        <div class="pause-card room-card" id="room-card" role="dialog" aria-labelledby="room-title" hidden>
+            <h2 id="room-title">Multijugador</h2>
+            <p class="controls-help">Navega con hasta 5 personas. Todos empiezan en el muelle grande de la isla de inicio.</p>
+            <label class="room-field">
+                <span>Tu nombre</span>
+                <input id="room-name" type="text" maxlength="16" autocomplete="nickname" spellcheck="false" />
+            </label>
+            <div id="room-offline">
+                <button class="room-create" id="room-create">Crear sala</button>
+                <div class="room-join">
+                    <input id="room-code" type="text" maxlength="5" placeholder="CÓDIGO" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Código de la sala" />
+                    <button class="secondary-button" id="room-join">Unirse</button>
+                </div>
+            </div>
+            <div id="room-online" hidden>
+                <div class="room-code-box">
+                    <span>Código de la sala</span>
+                    <strong id="room-code-value"></strong>
+                </div>
+                <div class="room-share">
+                    <button class="secondary-button" id="room-copy-code">Copiar código</button>
+                    <button class="secondary-button" id="room-copy-link">Copiar enlace</button>
+                </div>
+                <ul class="room-players" id="room-players"></ul>
+                <button class="secondary-button" id="room-leave">Salir de la sala</button>
+            </div>
+            <p class="controls-message" id="room-message" aria-live="polite"></p>
+            <button class="room-back" id="room-back">Volver</button>
         </div>
     </div>
 
@@ -164,6 +261,9 @@
             <button class="touch-button small" data-action="map" aria-label="Mapa">🗺</button>
             <button class="touch-button small" data-action="camera" aria-label="Cambiar cámara">🎥</button>
             <button class="touch-button small deck-only" data-action="character" aria-label="Caminar, sentarse o tomar el timón">🚶</button>
+            <button class="touch-button small" data-action="inventory" aria-label="Tus pescados">🎒</button>
+            <button class="touch-button small" data-action="chat" aria-label="Chat">💬</button>
+            <button class="touch-button small" data-action="emote" aria-label="Emotes">😀</button>
             <button class="touch-button boost" data-hold="boost" aria-label="Turbo">TURBO</button>
             <button class="touch-button boost rod-button" data-action="fish" aria-label="Lanzar o recoger el sedal">🎣</button>
         </div>

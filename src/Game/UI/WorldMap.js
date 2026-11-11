@@ -38,6 +38,16 @@ export class WorldMap {
     toggle(force = !this.visible) {
         if (force === this.visible) return
         this.visible = force
+        // First person on PC: the locked mouse is freed to use the map, and
+        // locked again when it closes (the key press counts as a gesture)
+        const { view } = this.game
+        if (force) {
+            this.relock = view.locked
+            view.unlock()
+        } else if (this.relock && view.mode === 'first' && this.game.playing) {
+            this.relock = false
+            view.lock()
+        }
         this.game.events.trigger('ui:click')
         this.element.classList.toggle('visible', force)
         this.select(null)
@@ -199,8 +209,24 @@ export class WorldMap {
             context.fillText(label, center.x, labelY)
         }
 
-        // Boat: pulsing "you are here" marker + heading arrow
-        const position = boat.mesh.position
+        // The other players in the room: a dot in their color with their name
+        for (const player of this.game.remotePlayers.list()) {
+            const dot = this.project(player.x, player.z)
+            context.fillStyle = player.color
+            context.strokeStyle = '#08203c'
+            context.lineWidth = 2
+            context.beginPath()
+            context.arc(dot.x, dot.y, 7, 0, Math.PI * 2)
+            context.fill()
+            context.stroke()
+            context.font = `700 ${Math.max(10, size * 0.022)}px system-ui, sans-serif`
+            context.fillStyle = '#ffffff'
+            context.fillText(player.name, dot.x, dot.y - 15)
+        }
+
+        // You (the boat, or yourself on land): pulsing "you are here" marker + heading arrow
+        const { character } = this.game
+        const position = character.rig().position
         const point = this.project(position.x, position.z)
         // Keep the marker on the map edge when sailing beyond it
         const fromCenter = Math.hypot(point.x - size / 2, point.y - size / 2)
@@ -218,8 +244,12 @@ export class WorldMap {
 
         // Boat forward (local +Z) projected on the map
         const q = boat.mesh.quaternion
-        const fx = 2 * (q.x * q.z + q.w * q.y)
-        const fz = 1 - 2 * (q.x * q.x + q.y * q.y)
+        let fx = 2 * (q.x * q.z + q.w * q.y)
+        let fz = 1 - 2 * (q.x * q.x + q.y * q.y)
+        if (character.ashore) {
+            fx = Math.sin(character.heading)
+            fz = Math.cos(character.heading)
+        }
         const heading = Math.atan2(-(fx * this.forward.x + fz * this.forward.z), fx * this.right.x + fz * this.right.z)
 
         context.save()

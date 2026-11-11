@@ -13,18 +13,27 @@ export const ACTIONS = {
     boost: ['ShiftLeft', 'ShiftRight'],
     respawn: ['KeyR', null],
     map: ['Tab', 'KeyM'],
-    open: ['Enter', 'KeyE'],
     // Like Minecraft's F5
     camera: ['KeyC', 'F5'],
-    // On boats with a walkable deck: get up, sit down, take the helm
+    // "Use": what the crosshair is on, open the ring's project, step off onto a
+    // dock or a beach, climb back aboard, get up, sit down, take the helm
     character: ['KeyF', null],
+    // Emote wheel (the emote floats big over your boat for everyone)
+    emote: ['KeyT', null],
+    // Inventory: your catch, coins, rods and your character's look
+    inventory: ['KeyE', 'KeyI'],
     // Cabin lights (at the helm of boats that have them)
     lights: ['KeyL', null],
-    // Cast / reel in, on boats with rod holders (also right click, like Minecraft)
-    fish: ['KeyG', null],
+    // Cast / reel in: right click on PC (Fishing.js); the 🎣 button on touch
+    fish: [null, null],
+    // Fixed: Enter always writes in the chat (like League of Legends)
+    chat: ['Enter', 'NumpadEnter'],
     // Fixed: Esc always opens the menu, so you can never lock yourself out
     pause: ['Escape', null]
 }
+
+// Actions whose keys can't be changed
+const FIXED = ['chat', 'pause', 'fish']
 
 export const ACTION_LABELS = {
     forward: 'Avanzar',
@@ -34,16 +43,26 @@ export const ACTION_LABELS = {
     boost: 'Turbo',
     respawn: 'Reaparecer',
     map: 'Mapa',
-    open: 'Abrir proyecto / usar bote',
     camera: 'Cambiar cámara',
-    character: 'Caminar / sentarse / tomar el timón',
+    character: 'Usar: bajar / subir al bote, caminar, sentarse, timón',
+    emote: 'Emotes',
+    inventory: 'Inventario y personaje',
     lights: 'Luces del bote',
     fish: 'Pescar / recoger el sedal',
+    chat: 'Chat',
     pause: 'Pausa'
 }
 
-// Actions the player can rebind (all but pause)
-export const REBINDABLE = Object.keys(ACTIONS).filter((action) => action !== 'pause')
+// Actions the player can rebind (all but chat and pause)
+export const REBINDABLE = Object.keys(ACTIONS).filter((action) => !FIXED.includes(action))
+// Keys no other action can take
+export const RESERVED_KEYS = FIXED.flatMap((action) => ACTIONS[action]).filter(Boolean)
+
+// True when the key goes to a text field (the chat, a name, a room code)
+export const isTyping = (target) => {
+    if (target instanceof HTMLTextAreaElement) return true
+    return target instanceof HTMLInputElement && !['checkbox', 'radio', 'range', 'button', 'submit'].includes(target.type)
+}
 
 // True while the on-screen touch controls are shown (see Inputs.setupTouchMode)
 export const isTouch = () => document.documentElement.classList.contains('touch')
@@ -59,14 +78,19 @@ export class Inputs {
         this.touch = { active: false, x: 0, y: 0, id: null }
         // While true (rebinding a key in the menu) the game ignores the keyboard
         this.capturing = false
+        // While true a panel is open (inventory, shop): the game keys are off
+        this.blocked = false
         this.applyBindings()
 
         window.addEventListener('keydown', (event) => {
-            if (this.capturing) return
+            // Writing in the chat or a text field: the keys are letters, not controls
+            if (this.capturing || this.blocked || isTyping(event.target)) return
             const action = this.actionByKey.get(event.code)
             if (!action) return
             // In menus Tab must keep moving the focus; otherwise the game owns bound keys
             if (BROWSER_KEYS.test(event.code) && (!this.game.state.paused || event.code !== 'Tab')) event.preventDefault()
+            // Enter opens the chat while playing (in menus it still presses buttons)
+            if (action === 'chat' && this.game.playing) event.preventDefault()
             if (!event.repeat) this.press(action)
         })
         window.addEventListener('keyup', (event) => {
@@ -89,13 +113,17 @@ export class Inputs {
             for (const action of REBINDABLE) {
                 const keys = saved[action]
                 if (Array.isArray(keys) && keys.length === 2 && keys.every((key) => key === null || typeof key === 'string')) {
-                    this.bindings[action] = [...keys]
+                    // Old saves had Enter on "open": it belongs to the chat now
+                    this.bindings[action] = keys.map((key) => (RESERVED_KEYS.includes(key) ? null : key))
+                    // Older default (I only): E opens the inventory now
+                    if (action === 'inventory' && keys[0] === 'KeyI' && keys[1] === null) this.bindings[action] = [...ACTIONS.inventory]
                 }
             }
         }
+        // Fixed actions first, so their keys always win
         this.actionByKey = new Map()
-        for (const [action, keys] of Object.entries(this.bindings)) {
-            for (const key of keys) if (key && !this.actionByKey.has(key)) this.actionByKey.set(key, action)
+        for (const action of [...FIXED, ...REBINDABLE]) {
+            for (const key of this.bindings[action]) if (key && !this.actionByKey.has(key)) this.actionByKey.set(key, action)
         }
         this.clear()
     }
@@ -151,7 +179,8 @@ export class Inputs {
             if (event.pointerType === 'touch') setTouch(true)
         }, { capture: true })
         window.addEventListener('keydown', (event) => {
-            if (event.code !== 'Escape') setTouch(false)
+            // The phone's own keyboard (writing in the chat) doesn't leave touch mode
+            if (event.code !== 'Escape' && !isTyping(event.target)) setTouch(false)
         })
     }
 

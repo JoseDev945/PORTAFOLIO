@@ -12,6 +12,7 @@ import { buildIsland, ISLAND_SCHEMA } from './Island.js'
 import { createProp } from './props/index.js'
 import { Zones } from './Zones.js'
 import { placePropZones } from './Zone.js'
+import { placePropSurfaces, surfaceAt } from './walkable.js'
 import { WorldEditor } from './WorldEditor.js'
 import { DayCycle } from './DayCycle.js'
 import { Birds } from './Birds.js'
@@ -100,6 +101,9 @@ export class World {
 
         this.build = null
         this.islands = []
+        this.walkables = []
+        this.berths = []
+        this.stations = []
         this.spawn = WORLD_SCHEMA.spawn.default
         this.playerBoat = WORLD_SCHEMA.playerBoat.default
         this.rebuild()
@@ -143,6 +147,10 @@ export class World {
         this.build?.dispose()
         this.build = build
         this.islands = islands
+        this.walkables = build.walkables
+        // Player berths at the marina (slot order), in world space
+        this.berths = build.berths
+        this.stations = build.stations
         this.spawn = data.spawn
         this.playerBoat = data.playerBoat
         this.faunaConfig = data.fauna
@@ -207,8 +215,14 @@ export class World {
         build.add(group)
         for (const [spec, parent] of colliders) build.addCollider(spec, parent)
         for (const prop of placed) placePropZones(build, prop)
+        for (const prop of placed) placePropSurfaces(build, prop)
         for (const prop of placed) if (prop.body) build.addDynamic(prop)
         build.onUpdate((time) => updaters.forEach((update) => update(time)))
+    }
+
+    // Floor under (x, z) for someone on foot, `margin` inside its edges: { y } or null (water)
+    surfaceAt(x, z, margin = 0) {
+        return surfaceAt(this.walkables, x, z, margin)
     }
 
     update() {

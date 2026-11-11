@@ -1,7 +1,7 @@
 import { Game } from '../Game.js'
 import { keyLabel } from '../utils/keys.js'
 
-// Card shown in a showroom zone: the boat's specs and a button (or Enter)
+// Card shown in a showroom zone: the boat's specs and a button (or F / E)
 // to switch to it. The choice is saved in the settings, so it's remembered.
 export class BoatCard {
     constructor() {
@@ -68,7 +68,8 @@ export class BoatCard {
 
         const inUse = this.game.boat.definition.id === definition.id
         this.button.disabled = inUse
-        const key = keyLabel(this.game.inputs.keysFor('open')[0])
+        // F at the helm
+        const key = keyLabel(this.game.inputs.keysFor('character')[0])
         // The key only on desktop: touch screens just tap the button
         if (inUse) this.button.textContent = '✓ Es tu bote actual'
         else {

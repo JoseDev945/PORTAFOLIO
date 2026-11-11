@@ -34,14 +34,15 @@ export class KeyHints {
         for (const element of document.querySelectorAll('[data-hints]')) {
             const type = element.dataset.hints
             if (type === 'hud') {
-                element.textContent = `${k('forward')}${k('left')}${k('backward')}${k('right')} navegar · ${k('boost')} turbo · ${k('camera')} cámara · ${k('map')} mapa · Esc pausa`
+                element.textContent = `${k('forward')}${k('left')}${k('backward')}${k('right')} navegar · ${k('boost')} turbo · ${k('character')} usar · ${k('camera')} cámara · ${k('map')} mapa · Enter chat · ${k('emote')} emotes · Esc pausa`
             } else if (type === 'start') {
                 element.replaceChildren(
                     this.line([{ kbd: 'forward' }, { kbd: 'left' }, { kbd: 'backward' }, { kbd: 'right' }, ' — navegar']),
                     this.line([{ kbd: 'boost' }, ' — turbo']),
                     this.line([{ kbd: 'respawn' }, ' — reaparecer · ', { kbd: 'map' }, ' — mapa · ', { kbd: 'pause' }, ' — pausa']),
-                    this.line([{ kbd: 'open' }, ' — abrir proyecto · ', { kbd: 'camera' }, ' — cámara']),
-                    this.line([{ kbd: 'fish' }, ' o clic derecho — pescar (bote Corvina 250 del astillero)']),
+                    this.line([{ kbd: 'character' }, ' — usar: abrir proyecto, bajarte al muelle y caminar · ', { kbd: 'camera' }, ' — cámara']),
+                    this.line([{ kbd: 'chat' }, ' — chat · ', { kbd: 'emote' }, ' — emotes sobre tu bote']),
+                    this.line(['Clic derecho — pescar (Corvina 250) · ', { kbd: 'inventory' }, ' — inventario']),
                     this.line(['Puedes cambiar las teclas en Pausa → Controles'])
                 )
             } else if (type === 'pause') {
@@ -49,7 +50,8 @@ export class KeyHints {
                     this.line([{ kbd: 'pause' }, ' pausa']),
                     this.line([{ kbd: 'map' }, ' mapa']),
                     this.line([{ kbd: 'respawn' }, ' reaparecer']),
-                    this.line([{ kbd: 'camera' }, ' cámara'])
+                    this.line([{ kbd: 'camera' }, ' cámara']),
+                    this.line([{ kbd: 'chat' }, ' chat · ', { kbd: 'emote' }, ' emotes'])
                 )
             } else {
                 element.textContent = k(type)

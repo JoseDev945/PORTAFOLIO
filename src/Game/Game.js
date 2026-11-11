@@ -17,6 +17,10 @@ import { Spray } from './Boat/Spray.js'
 import { Audio } from './Audio.js'
 import { UI } from './UI/UI.js'
 import { Fishing } from './Fishing/Fishing.js'
+import { Inventory } from './Fishing/Inventory.js'
+import { RemotePlayers } from './Network/RemotePlayers.js'
+import { Network } from './Network/Network.js'
+import { Emotes } from './Network/Emotes.js'
 
 // Lets the browser paint and handle input before the next boot step
 const nextTask = () => globalThis.scheduler?.yield?.() ?? new Promise((resolve) => setTimeout(resolve, 0))
@@ -84,10 +88,16 @@ export class Game {
         measure('boot:world')
         await nextTask()
         this.boat = new Boat()
+        // Your catch, coins, rods and clothes (before Character and Fishing, which read them)
+        this.inventory = new Inventory()
         this.character = new Character()
         this.wake = new Wake()
         this.spray = new Spray()
         this.fishing = new Fishing()
+        // Multiplayer (PeerJS itself only downloads when a room is created or joined)
+        this.remotePlayers = new RemotePlayers()
+        this.network = new Network()
+        this.emotes = new Emotes()
         measure('boot:boat')
         await nextTask()
 
@@ -103,8 +113,6 @@ export class Game {
     // What each input action does depends on the game state, so it lives here
     setActions() {
         this.inputs.on('respawn', () => this.playing && this.boat.respawn())
-        // Enter: act on the zone the boat is in (open a project, take a boat...)
-        this.inputs.on('open', () => this.playing && this.events.trigger('interact', this.world.zones.active))
         this.inputs.on('map', () => this.playing && this.ui.map.toggle())
         this.inputs.on('camera', () => this.playing && this.view.nextMode())
         this.inputs.on('pause', () => {

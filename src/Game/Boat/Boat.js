@@ -24,6 +24,8 @@ export class Boat {
     constructor() {
         this.game = Game.getInstance()
         this.spawn = new THREE.Vector3()
+        this.slot = 0
+        this.parked = false
 
         const { RAPIER, world } = this.game.physics
         this.body = world.createRigidBody(
@@ -60,18 +62,50 @@ export class Boat {
     // Reads the boat type and spawn point from the content
     applyContent() {
         const { content, world, diagnostics } = this.game
-        const spawn = world.spawn
-        this.spawn.set(spawn.x, 1, spawn.z)
-        this.spawnAngle = THREE.MathUtils.degToRad(spawn.angle)
 
         // The boat picked at the showroom wins, as long as it still exists
         const chosen = this.game.settings.get('boat')
         const id = chosen && content.boats?.[chosen] ? chosen : world.playerBoat
         const definition = resolveBoat(content.boats, id, 'world.playerBoat', (message) => diagnostics.warn(message))
         const key = JSON.stringify(definition)
-        if (key === this.definitionKey) return
-        this.definitionKey = key
-        this.setDefinition(definition)
+        if (key !== this.definitionKey) {
+            this.definitionKey = key
+            this.setDefinition(definition)
+        }
+        this.updateSpawn()
+    }
+
+    // Everyone starts moored at the marina, each player at their own berth
+    // (slot 0 alone or hosting a room). Without a marina: world.spawn.
+    updateSpawn() {
+        const { world } = this.game
+        const berth = world.berths[this.slot] ?? world.berths[0]
+        if (berth) {
+            // The berth is the stern line: the boat sits ahead of it, bow out
+            const distance = this.half.z + 0.3
+            this.spawn.set(berth.x + Math.sin(berth.angle) * distance, 1, berth.z + Math.cos(berth.angle) * distance)
+            this.spawnAngle = berth.angle
+            return
+        }
+        const spawn = world.spawn
+        this.spawn.set(spawn.x, 1, spawn.z)
+        this.spawnAngle = THREE.MathUtils.degToRad(spawn.angle)
+    }
+
+    // Multiplayer slot (0–4): picks the berth. move = send the boat there now
+    // (joining a room: everyone meets at the marina)
+    setSlot(slot, { move = true } = {}) {
+        if (slot === this.slot) return
+        this.slot = slot
+        this.updateSpawn()
+        if (!move) return
+        this.respawn()
+        this.game.view.snap(this.spawn)
+    }
+
+    // Moored while the player walks on land: the water holds it in place
+    setParked(parked) {
+        this.parked = parked
     }
 
     setDefinition(definition) {
@@ -162,6 +196,8 @@ export class Boat {
         this.body.setAngvel({ x: 0, y: 0, z: 0 }, true)
         // No interpolation across a teleport
         if (this.previous) this.storePose(this.previous)
+        // Whoever was on land climbs back aboard
+        this.game.events.trigger('boat:place')
     }
 
     // Called once per physics substep
@@ -203,6 +239,13 @@ export class Boat {
         this.state.speed = forwardSpeed
 
         if (inWater === 0) return
+
+        // Moored (nobody aboard): drifting and turning die out quickly
+        if (this.parked) {
+            const hold = this.mass * 2.5 * dt
+            body.applyImpulse({ x: -linvel.x * hold, y: 0, z: -linvel.z * hold }, true)
+            body.applyTorqueImpulse({ x: 0, y: -angvel.y * this.yawInertia * 3 * dt, z: 0 }, true)
+        }
 
         // Water drag: weak forward, strong sideways (acts like a keel)
         const dragForward = -forwardSpeed * this.params.forwardDrag * this.mass * dt * inWater

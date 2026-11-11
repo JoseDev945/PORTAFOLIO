@@ -23,7 +23,9 @@ const defaults = {
     // Real reflections of the world in the water (the most expensive effect)
     reflections: true,
     // FPS counter in the top right corner
-    showFps: false
+    showFps: false,
+    // Name shown to the other players in a room ('' = "Marinero NN")
+    playerName: ''
 }
 
 // Player preferences, remembered in this browser between visits.

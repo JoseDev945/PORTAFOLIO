@@ -16,7 +16,8 @@ import { materials } from '../materials.js'
 //       // Without it the colliders are fixed. Data can override with physics: 'fixed'.
 //       body: { type: 'dynamic', mass: 1.5, floatDepth: 0.3, anchor: { slack: 2 } },
 //       create({ params, rand, content, warn }) {
-//           return { object, colliders: [...], zones: [...], body: { mass }, update(time, object) {} }
+//           return { object, colliders: [...], zones: [...], body: { mass }, update(time, object) {},
+//                    walkable: [...], berths: [...] }   // floors on foot, see World/walkable.js
 //       }
 //   }
 const modules = import.meta.glob(['./*.js', '!./index.js'], { eager: true })
@@ -63,5 +64,15 @@ export function createProp(entry, path, { warn, content, groundY = 0 }) {
     // Animated and physical objects move on their own: never merged with the island
     if (definition.animated || dynamic) object.userData.keep = true
 
-    return { object, colliders: result.colliders ?? [], zones: result.zones ?? [], update: result.update, body }
+    return {
+        object,
+        colliders: result.colliders ?? [],
+        zones: result.zones ?? [],
+        // Floors for someone on foot and boat berths (see World/walkable.js)
+        walkable: result.walkable ?? [],
+        berths: result.berths ?? [],
+        stations: result.stations ?? [],
+        update: result.update,
+        body
+    }
 }
