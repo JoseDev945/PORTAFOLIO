@@ -25,7 +25,9 @@ const defaults = {
     // FPS counter in the top right corner
     showFps: false,
     // Name shown to the other players in a room ('' = "Marinero NN")
-    playerName: ''
+    playerName: '',
+    // Last room created or joined: its code is filled in to come back quickly
+    lastRoom: ''
 }
 
 // Player preferences, remembered in this browser between visits.

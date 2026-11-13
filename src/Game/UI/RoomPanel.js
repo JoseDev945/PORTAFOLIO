@@ -20,6 +20,10 @@ export class RoomPanel {
         this.createButton = $('room-create')
         this.joinButton = $('room-join')
         this.badge = $('room-badge')
+        this.badgeText = $('room-badge-text')
+        this.cancelButton = $('room-cancel')
+        $('room-badge-leave').addEventListener('click', () => network.leave())
+        this.cancelButton.addEventListener('click', () => network.leave())
         const network = this.game.network
 
         $('room-button').addEventListener('click', () => this.open())
@@ -70,6 +74,8 @@ export class RoomPanel {
         this.card.hidden = false
         this.nameInput.value = this.game.settings.get('playerName') ?? ''
         this.nameInput.placeholder = this.game.network.name
+        // The last room, ready to join again
+        if (!this.codeInput.value) this.codeInput.value = this.game.settings.get('lastRoom') ?? ''
         this.say('')
         this.render()
         ;(this.game.network.online ? document.getElementById('room-copy-code') : this.createButton).focus()
@@ -110,6 +116,7 @@ export class RoomPanel {
         this.offline.hidden = online
         this.online.hidden = !online
         this.createButton.disabled = this.joinButton.disabled = status === 'connecting'
+        this.cancelButton.hidden = status !== 'connecting'
         if (status === 'connecting') this.say('Conectando…')
         else if (this.message.textContent === 'Conectando…') this.say('')
 
@@ -127,6 +134,6 @@ export class RoomPanel {
 
         // HUD badge
         this.badge.hidden = !online && status !== 'connecting'
-        this.badge.textContent = online ? `👥 Sala ${network.code} · ${players.length}/${MAX_PLAYERS}` : '👥 Conectando…'
+        this.badgeText.textContent = online ? `👥 Sala ${network.code} · ${players.length}/${MAX_PLAYERS}` : '👥 Conectando…'
     }
 }

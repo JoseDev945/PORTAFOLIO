@@ -96,8 +96,15 @@ export class Network {
         // A shared link (?sala=CODE) joins that room right after setting sail
         const linked = cleanCode(new URLSearchParams(location.search).get('sala'))
         if (linked.length === CODE_LENGTH) this.game.events.on('start', () => this.join(linked))
-        // Closing the tab: say goodbye so the others don't wait for the timeout
-        window.addEventListener('pagehide', () => this.leave({ quiet: true }))
+        // Closing the tab: say goodbye so the others don't wait for the timeout.
+        // Not 'pagehide': phones fire it when switching apps (to send the code
+        // by WhatsApp…) and that closed the room.
+        window.addEventListener('beforeunload', () => this.leave({ quiet: true }))
+        // Back from the background: the phone may have cut the link to the server
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState !== 'visible' || !this.peer || this.peer.destroyed) return
+            if (this.peer.disconnected) this.peer.reconnect()
+        })
     }
 
     get online() {
@@ -208,6 +215,7 @@ export class Network {
         }
         this.slot = 0
         this.players.clear()
+        this.game.settings.set('lastRoom', this.code)
         this.becomeHost()
         this.system(`Sala creada: ${this.code}. Comparte el código o el enlace (hasta ${MAX_PLAYERS} jugadores)`)
     }
@@ -391,7 +399,7 @@ export class Network {
             return
         }
         const connected = await this.connect()
-        if (connected === 'unavailable' && this.status === 'connecting') this.fail(`No existe la sala ${code} (o ya se cerró)`)
+        if (connected === 'unavailable' && this.status === 'connecting') this.fail(`No se encontró la sala ${code}: revisa el código, y que quien la creó siga con el juego abierto`)
         else if (!connected && this.status === 'connecting') this.fail('No se pudo conectar con la sala. Revisa el código e inténtalo otra vez')
     }
 
@@ -511,6 +519,7 @@ export class Network {
         this.setStatus('joined')
         if (rejoining) this.system(`La sala sigue: ahora la mantiene ${this.nameOf(this.hostSlot)}`)
         else this.system(`Te uniste a la sala ${this.code}`)
+        this.game.settings.set('lastRoom', this.code)
         this.playersChanged()
         this.startLoop()
     }

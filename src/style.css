@@ -2167,3 +2167,23 @@ html.has-deck .touch-buttons {
 .touch-button[data-action='lights'] {
     grid-area: lights;
 }
+
+/* Room badge: the leave button can be clicked (the rest of the HUD can't) */
+.room-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.room-badge-leave {
+    padding: 1px 8px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(230, 57, 70, 0.85);
+    color: #fff;
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    pointer-events: auto;
+}

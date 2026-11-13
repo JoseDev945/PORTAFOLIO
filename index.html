@@ -53,7 +53,10 @@
         <div class="hud-title">Mi Portafolio</div>
         <div class="hud-hint" data-hints="hud"></div>
         <div class="hud-coins" id="hud-coins"></div>
-        <div class="room-badge" id="room-badge" hidden></div>
+        <div class="room-badge" id="room-badge" hidden>
+            <span id="room-badge-text"></span>
+            <button class="room-badge-leave" id="room-badge-leave" aria-label="Salir de la sala">Salir ✕</button>
+        </div>
     </div>
 
     <div class="project-card" id="project-card">
@@ -224,6 +227,7 @@
             </label>
             <div id="room-offline">
                 <button class="room-create" id="room-create">Crear sala</button>
+                <button class="secondary-button" id="room-cancel" hidden>Cancelar</button>
                 <div class="room-join">
                     <input id="room-code" type="text" maxlength="5" placeholder="CÓDIGO" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Código de la sala" />
                     <button class="secondary-button" id="room-join">Unirse</button>

@@ -513,3 +513,9 @@ Principios clave:
   - modelos de Blender (`.glb`) con un sistema `Resources`;
   - música real (Howler);
   - más interacciones con zonas (por ejemplo, cambiar el color del bote).
+
+> **Nota multijugador (13 de noviembre de 2026)**: "no encontraba las salas". El servidor de PeerJS funcionaba;
+> el juego cerraba la sala con `pagehide`, que el celular dispara al cambiar de app (p. ej. para mandar el código
+> por WhatsApp). Ahora se usa `beforeunload` y al volver a la pestaña se reconecta al servidor. Se agregó
+> "Salir ✕" en el indicador de sala, "Cancelar" mientras conecta, y el último código queda escrito (`lastRoom`).
+> Las salas **no se guardan**: existen mientras haya alguien dentro y el código cambia en cada sala nueva.
