@@ -2,6 +2,7 @@ import { Game } from '../Game.js'
 import { MAX_PLAYERS } from '../utils/players.js'
 import { waveHeight } from '../World/Waves.js'
 import { EMOTES } from './emoteList.js'
+import { iceServers, hasRelay } from './iceServers.js'
 
 // Multiplayer rooms, browser to browser (WebRTC through PeerJS: no server of
 // our own). One player is the host: the others connect to it and it relays
@@ -160,9 +161,11 @@ export class Network {
 
     // PeerJS is only downloaded when a room is created or joined
     async createPeer(id) {
-        const { Peer } = await import('peerjs')
+        const [{ Peer }, servers] = await Promise.all([import('peerjs'), iceServers()])
+        // Our STUN/TURN list (PeerJS's default TURN servers no longer exist)
+        const options = { debug: 0, config: { iceServers: servers } }
         return new Promise((resolve, reject) => {
-            const peer = id ? new Peer(id, { debug: 0 }) : new Peer({ debug: 0 })
+            const peer = id ? new Peer(id, options) : new Peer(options)
             const timeout = setTimeout(() => {
                 peer.destroy()
                 reject(Object.assign(new Error('timeout'), { type: 'network' }))
@@ -400,7 +403,12 @@ export class Network {
         }
         const connected = await this.connect()
         if (connected === 'unavailable' && this.status === 'connecting') this.fail(`No se encontró la sala ${code}: revisa el código, y que quien la creó siga con el juego abierto`)
-        else if (!connected && this.status === 'connecting') this.fail('No se pudo conectar con la sala. Revisa el código e inténtalo otra vez')
+        else if (!connected && this.status === 'connecting') {
+            // The room exists but the two devices couldn't reach each other: usually different networks without a relay
+            this.fail(hasRelay()
+                ? 'No se pudo conectar con la sala. Inténtalo otra vez'
+                : 'No se pudo conectar. Si uno está con datos móviles, conéctense a la misma WiFi (falta configurar un servidor TURN)')
+        }
     }
 
     // Opens the channel to the room's host and waits for its welcome.

@@ -519,3 +519,10 @@ Principios clave:
 > por WhatsApp). Ahora se usa `beforeunload` y al volver a la pestaña se reconecta al servidor. Se agregó
 > "Salir ✕" en el indicador de sala, "Cancelar" mientras conecta, y el último código queda escrito (`lastRoom`).
 > Las salas **no se guardan**: existen mientras haya alguien dentro y el código cambia en cada sala nueva.
+
+> **TURN (13 de noviembre de 2026)**: el celular (datos móviles) no entraba a la sala de la PC. Los TURN que
+> trae PeerJS (`eu-0/us-0.turn.peerjs.com`) **ya no existen** y openrelay.metered.ca está caído. Ahora
+> `Network/iceServers.js` usa varios STUN (Google, Cloudflare) y un TURN propio desde variables de entorno:
+> `VITE_METERED_APP` + `VITE_METERED_KEY` (cuenta gratis en metered.ca) o `VITE_TURN_URLS/USERNAME/CREDENTIAL`.
+> Ver `.env.example`. **Ya hay cuenta Metered**: credenciales fijas en `.env.local` (`VITE_TURN_URLS`, relay
+> `global.relay.metered.ca`). Pendiente: ponerlas también en Vercel.
